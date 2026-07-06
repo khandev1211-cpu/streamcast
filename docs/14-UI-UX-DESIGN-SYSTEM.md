@@ -8,7 +8,7 @@ Dark-first, modern, minimal-chrome-during-playback. The player itself should fee
 
 ### What "MX Player style" means concretely here
 
-- **Top tabs, not just bottom nav** — primary navigation (Library / IPTV / Live) sits as tabs at the top of the home screen, MX-Player-style, rather than relying only on bottom nav. Settings lives behind an overflow/menu icon rather than taking up a full tab slot.
+- **Bottom Navigation for primary sections** — primary navigation (Library / IPTV / Live / Settings) sits at the bottom of the home screen for easy thumb reach, while retaining MX Player's clean aesthetic and functional player gestures.
 - **Grid-first local library, grouped by folder** — local videos display as a thumbnail grid, grouped by device folder first (mirroring how MX Player surfaces "Video" by folder before flattening to one list). A grid/list toggle remains available.
 - **Gesture-driven player screen** — swipe vertically on the left half of the screen for brightness, right half for volume; double-tap left/right to seek ±10s; pinch or double-tap-and-hold to resize/zoom video. These gestures work without any visible control, which is core to why MX Player's player screen feels fast.
 - **Minimal always-visible controls, everything else tucked into a corner menu** — the visible overlay is just a seek bar, play/pause, and prev/next. Subtitle language, audio track, playback speed, and subtitle styling live behind a single "more options" icon (top-right corner, MX-Player-style) rather than spread across the main overlay.
@@ -28,7 +28,7 @@ Dark-first, modern, minimal-chrome-during-playback. The player itself should fee
 
 ## Layout patterns
 
-- **Top tab bar** (Library / IPTV / Live) as the primary navigation, MX-Player-style, with Settings reached via an overflow icon rather than a fourth tab.
+- **Bottom tab bar** (Library / IPTV / Live / Settings) as the primary navigation for modern accessibility and ease of use.
 - **Grid-first, folder-grouped local library** — thumbnails in a grid, grouped by folder by default; a toggle switches to a flat compact list for users who prefer scanning by filename.
 - **Channel lists (IPTV/Live)** default to a list view (denser, more scannable for potentially hundreds of channels) with channel logos as small leading icons, category headers, and a grid toggle available for users who prefer browsing by logo.
 - **Full-screen player** with auto-hiding controls and MX-Player-style gesture zones (see above) — tap to reveal controls, auto-hide after a few seconds of inactivity.

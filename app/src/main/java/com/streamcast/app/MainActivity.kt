@@ -16,8 +16,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.*
 import androidx.navigation.navArgument
@@ -27,7 +29,6 @@ import com.streamcast.feature.library.ui.LibraryScreen
 import com.streamcast.feature.library.ui.player.PlayerScreen
 import com.streamcast.ui.theme.StreamCastTheme
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -54,13 +55,19 @@ class MainActivity : ComponentActivity() {
                 }
 
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
-                val currentRoute = navBackStackEntry?.destination?.route ?: "library"
+                val currentDestination = navBackStackEntry?.destination
+                val currentRoute = currentDestination?.route ?: "library"
                 val isPlayerScreen = currentRoute.startsWith("player")
 
                 Scaffold(
                     topBar = {
                         if (!isPlayerScreen) {
-                            StreamCastTopBar(navController, currentRoute)
+                            StreamCastTopBar(navController)
+                        }
+                    },
+                    bottomBar = {
+                        if (!isPlayerScreen) {
+                            StreamCastBottomBar(navController)
                         }
                     }
                 ) { innerPadding ->
@@ -117,60 +124,51 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StreamCastTopBar(navController: androidx.navigation.NavHostController, currentRoute: String) {
-    var showMenu by remember { mutableStateOf(false) }
-    val tabs = listOf("library" to "Library", "iptv" to "IPTV", "live" to "Live")
-    
-    Column {
-        TopAppBar(
-            title = { Text("StreamCast", style = MaterialTheme.typography.titleLarge, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) },
-            actions = {
-                IconButton(onClick = { /* Search */ }) {
-                    Icon(Icons.Default.Search, contentDescription = "Search")
-                }
-                IconButton(onClick = { showMenu = !showMenu }) {
-                    Icon(Icons.Default.MoreVert, contentDescription = "More")
-                }
-                DropdownMenu(
-                    expanded = showMenu,
-                    onDismissRequest = { showMenu = false }
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("Settings") },
-                        onClick = { 
-                            showMenu = false
-                            navController.navigate("settings")
-                        },
-                        leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) }
-                    )
-                }
+fun StreamCastTopBar(navController: androidx.navigation.NavHostController) {
+    TopAppBar(
+        title = { Text("StreamCast", style = MaterialTheme.typography.titleLarge, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) },
+        actions = {
+            IconButton(onClick = { /* Search */ }) {
+                Icon(Icons.Default.Search, contentDescription = "Search")
             }
-        )
-        
-        // MX Player style top tabs
-        if (currentRoute in listOf("library", "iptv", "live")) {
-            TabRow(
-                selectedTabIndex = tabs.indexOfFirst { it.first == currentRoute }.coerceAtLeast(0),
-                containerColor = MaterialTheme.colorScheme.surface,
-                contentColor = MaterialTheme.colorScheme.primary,
-                indicator = { tabPositions ->
-                    TabRowDefaults.Indicator(
-                        Modifier.tabIndicatorOffset(tabPositions[tabs.indexOfFirst { it.first == currentRoute }.coerceAtLeast(0)])
-                    )
-                }
-            ) {
-                tabs.forEach { (route, label) ->
-                    Tab(
-                        selected = currentRoute == route,
-                        onClick = { navController.navigate(route) {
-                            popUpTo("library") { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }},
-                        text = { Text(label, style = MaterialTheme.typography.bodyMedium) }
-                    )
-                }
+            IconButton(onClick = { /* More Menu */ }) {
+                Icon(Icons.Default.MoreVert, contentDescription = "More")
             }
+        }
+    )
+}
+
+sealed class MainScreen(val route: String, val label: String, val icon: ImageVector) {
+    object Library : MainScreen("library", "Local", Icons.Default.Folder)
+    object Iptv : MainScreen("iptv", "IPTV", Icons.Default.Tv)
+    object Live : MainScreen("live", "Live", Icons.Default.LiveTv)
+    object Settings : MainScreen("settings", "Settings", Icons.Default.Settings)
+}
+
+@Composable
+fun StreamCastBottomBar(navController: androidx.navigation.NavHostController) {
+    val items = listOf(MainScreen.Library, MainScreen.Iptv, MainScreen.Live, MainScreen.Settings)
+    NavigationBar(
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = 8.dp
+    ) {
+        val navBackStackEntry by navController.currentBackStackEntryAsState()
+        val currentDestination = navBackStackEntry?.destination
+        items.forEach { screen ->
+            NavigationBarItem(
+                icon = { Icon(screen.icon, contentDescription = null) },
+                label = { Text(screen.label) },
+                selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
+                onClick = {
+                    navController.navigate(screen.route) {
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
+            )
         }
     }
 }
