@@ -1,12 +1,15 @@
 package com.streamcast.feature.library.ui.player
 
+import android.app.Activity
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.annotation.OptIn
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -17,11 +20,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.streamcast.core.player.MediaSource
 import com.streamcast.core.player.PlaybackState
@@ -35,16 +41,22 @@ fun PlayerScreen(
     onBack: () -> Unit = {},
     viewModel: PlayerViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
+    val activity = context as? Activity
+    
     val playbackState by viewModel.playbackState.collectAsState()
     val player by viewModel.player.collectAsState()
     val currentPos by viewModel.currentPosition.collectAsState()
     val duration by viewModel.duration.collectAsState()
+    val playbackSpeed by viewModel.playbackSpeed.collectAsState()
     
     var showControls by remember { mutableStateOf(true) }
     var isLocked by remember { mutableStateOf(false) }
-    
-    var gestureType by remember { mutableStateOf("") }
-    var gestureValue by remember { mutableStateOf(0f) }
+    var resizeMode by remember { mutableStateOf(AspectRatioFrameLayout.RESIZE_MODE_FIT) }
+
+    // Gesture status
+    var gestureType by remember { mutableStateOf("") } // "Volume", "Brightness", "Seek"
+    var gestureProgress by remember { mutableStateOf(0f) } // 0 to 1
 
     LaunchedEffect(showControls, isLocked) {
         if (showControls && !isLocked) {
@@ -63,30 +75,40 @@ fun PlayerScreen(
             .background(Color.Black)
             .pointerInput(isLocked) {
                 if (isLocked) return@pointerInput
+                detectTapGestures(
+                    onTap = { showControls = !showControls },
+                    onDoubleTap = { offset ->
+                        val isRightSide = offset.x > size.width / 2
+                        if (isRightSide) {
+                            viewModel.seekTo(currentPos + 10000)
+                        } else {
+                            viewModel.seekTo(currentPos - 10000)
+                        }
+                    }
+                )
+            }
+            .pointerInput(isLocked) {
+                if (isLocked) return@pointerInput
                 detectVerticalDragGestures(
                     onDragStart = { offset ->
                         gestureType = if (offset.x < size.width / 2) "Brightness" else "Volume"
                     },
                     onDragEnd = { gestureType = "" },
                     onVerticalDrag = { _, dragAmount ->
-                        gestureValue -= dragAmount / 100f
+                        val delta = -dragAmount / 500f // Sensitivity
+                        gestureProgress = (gestureProgress + delta).coerceIn(0f, 1f)
+                        
+                        if (gestureType == "Volume") {
+                            player?.volume = gestureProgress
+                        } else if (gestureType == "Brightness") {
+                            activity?.window?.let { window ->
+                                val params = window.attributes
+                                params.screenBrightness = gestureProgress
+                                window.attributes = params
+                            }
+                        }
                     }
                 )
-            }
-            .pointerInput(isLocked) {
-                if (isLocked) return@pointerInput
-                detectHorizontalDragGestures(
-                    onDragStart = { gestureType = "Seek" },
-                    onDragEnd = { gestureType = "" },
-                    onHorizontalDrag = { _, dragAmount ->
-                        val seekDelta = (dragAmount * 100).toLong()
-                        viewModel.seekTo(currentPos + seekDelta)
-                    }
-                )
-            }
-            .clickable { 
-                if (!isLocked) showControls = !showControls 
-                else showControls = true
             }
     ) {
         AndroidView(
@@ -101,20 +123,14 @@ fun PlayerScreen(
             },
             update = { playerView ->
                 playerView.player = player
+                playerView.resizeMode = resizeMode
             },
             modifier = Modifier.fillMaxSize()
         )
 
-        // Gesture Indicator
+        // MX Player style Gesture Overlay
         if (gestureType.isNotEmpty()) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .background(Color.Black.copy(alpha = 0.5f), shape = MaterialTheme.shapes.medium)
-                    .padding(16.dp)
-            ) {
-                Text(gestureType, color = Color.White)
-            }
+            GestureIndicator(type = gestureType, progress = gestureProgress)
         }
 
         AnimatedVisibility(
@@ -127,6 +143,7 @@ fun PlayerScreen(
                 playbackState = playbackState,
                 currentPosition = currentPos,
                 duration = duration,
+                playbackSpeed = playbackSpeed,
                 isLocked = isLocked,
                 onBack = onBack,
                 onPlayPause = {
@@ -135,8 +152,55 @@ fun PlayerScreen(
                 },
                 onLockToggle = { isLocked = !isLocked },
                 onSeek = { viewModel.seekTo(it) },
-                onGenerateSubtitles = { /* Launch Subtitle Generation */ }
+                onGenerateSubtitles = { /* Launch Subtitle Generation */ },
+                onToggleSpeed = { viewModel.togglePlaybackSpeed() },
+                onToggleResize = {
+                    resizeMode = when (resizeMode) {
+                        AspectRatioFrameLayout.RESIZE_MODE_FIT -> AspectRatioFrameLayout.RESIZE_MODE_FILL
+                        AspectRatioFrameLayout.RESIZE_MODE_FILL -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                        else -> AspectRatioFrameLayout.RESIZE_MODE_FIT
+                    }
+                }
             )
+        }
+    }
+}
+
+@Composable
+fun GestureIndicator(type: String, progress: Float) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(48.dp),
+        contentAlignment = if (type == "Brightness") Alignment.CenterStart else Alignment.CenterEnd
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .width(48.dp)
+                .background(Color.Black.copy(alpha = 0.5f), shape = MaterialTheme.shapes.medium)
+                .padding(vertical = 16.dp)
+        ) {
+            Icon(
+                imageVector = if (type == "Brightness") Icons.Default.BrightnessMedium else Icons.Default.VolumeUp,
+                contentDescription = null,
+                tint = Color.White
+            )
+            Spacer(Modifier.height(8.dp))
+            Box(
+                modifier = Modifier
+                    .width(4.dp)
+                    .height(150.dp)
+                    .background(Color.Gray.copy(alpha = 0.5f), shape = MaterialTheme.shapes.extraSmall)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight(progress)
+                        .align(Alignment.BottomCenter)
+                        .background(Color.White, shape = MaterialTheme.shapes.extraSmall)
+                )
+            }
         }
     }
 }
@@ -147,12 +211,15 @@ fun PlayerControlsOverlay(
     playbackState: PlaybackState,
     currentPosition: Long,
     duration: Long,
+    playbackSpeed: Float,
     isLocked: Boolean,
     onBack: () -> Unit,
     onPlayPause: () -> Unit,
     onLockToggle: () -> Unit,
     onSeek: (Long) -> Unit,
-    onGenerateSubtitles: () -> Unit
+    onGenerateSubtitles: () -> Unit,
+    onToggleSpeed: () -> Unit,
+    onToggleResize: () -> Unit
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         if (!isLocked) {
@@ -176,16 +243,18 @@ fun PlayerControlsOverlay(
                     modifier = Modifier.weight(1f)
                 )
                 
-                // Flagship Feature: Generate Subtitles
+                TextButton(onClick = onToggleSpeed) {
+                    Text("${playbackSpeed}x", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+
                 Button(
                     onClick = onGenerateSubtitles,
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                    modifier = Modifier.padding(end = 8.dp)
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
                 ) {
                     Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("AI Subtitles", style = MaterialTheme.typography.labelSmall)
+                    Text("AI", style = MaterialTheme.typography.labelSmall)
                 }
 
                 IconButton(onClick = { /* More Menu */ }) {
@@ -193,14 +262,14 @@ fun PlayerControlsOverlay(
                 }
             }
 
-            // Center Controls (MX Player: Previous, Play/Pause, Next)
+            // Center Controls
             Row(
                 modifier = Modifier.align(Alignment.Center),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(32.dp)
+                horizontalArrangement = Arrangement.spacedBy(48.dp)
             ) {
-                IconButton(onClick = { /* Previous */ }) {
-                    Icon(Icons.Default.SkipPrevious, contentDescription = "Previous", tint = Color.White, modifier = Modifier.size(48.dp))
+                IconButton(onClick = { onSeek(currentPosition - 10000) }) {
+                    Icon(Icons.Default.Replay10, contentDescription = "-10s", tint = Color.White, modifier = Modifier.size(48.dp))
                 }
                 
                 IconButton(
@@ -208,15 +277,15 @@ fun PlayerControlsOverlay(
                     modifier = Modifier.size(80.dp)
                 ) {
                     Icon(
-                        imageVector = if (playbackState is PlaybackState.Playing) Icons.Default.PauseCircleFilled else Icons.Default.PlayCircleFilled,
+                        imageVector = if (playbackState is PlaybackState.Playing) Icons.Default.PauseCircle else Icons.Default.PlayCircle,
                         contentDescription = "Play/Pause",
                         tint = Color.White,
                         modifier = Modifier.fillMaxSize()
                     )
                 }
 
-                IconButton(onClick = { /* Next */ }) {
-                    Icon(Icons.Default.SkipNext, contentDescription = "Next", tint = Color.White, modifier = Modifier.size(48.dp))
+                IconButton(onClick = { onSeek(currentPosition + 10000) }) {
+                    Icon(Icons.Default.Forward10, contentDescription = "+10s", tint = Color.White, modifier = Modifier.size(48.dp))
                 }
             }
 
@@ -253,21 +322,20 @@ fun PlayerControlsOverlay(
                     }
                     
                     Row {
-                        IconButton(onClick = { /* Subtitle Language */ }) {
-                            Icon(Icons.Default.Subtitles, contentDescription = "Subtitles", tint = Color.White)
-                        }
-                        IconButton(onClick = { /* Audio Track */ }) {
+                        IconButton(onClick = { /* Audio */ }) {
                             Icon(Icons.Default.AudioFile, contentDescription = "Audio", tint = Color.White)
+                        }
+                        IconButton(onClick = { /* Subtitle */ }) {
+                            Icon(Icons.Default.Subtitles, contentDescription = "Subtitles", tint = Color.White)
                         }
                     }
                     
-                    IconButton(onClick = { /* Resize */ }) {
+                    IconButton(onClick = onToggleResize) {
                         Icon(Icons.Default.AspectRatio, contentDescription = "Resize", tint = Color.White)
                     }
                 }
             }
         } else {
-            // Locked UI
             IconButton(
                 onClick = onLockToggle,
                 modifier = Modifier

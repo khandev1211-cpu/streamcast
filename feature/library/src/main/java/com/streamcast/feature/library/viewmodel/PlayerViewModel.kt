@@ -26,12 +26,15 @@ class PlayerViewModel @Inject constructor(
     private val _duration = MutableStateFlow(0L)
     val duration: StateFlow<Long> = _duration.asStateFlow()
 
+    private val _playbackSpeed = MutableStateFlow(1.0f)
+    val playbackSpeed: StateFlow<Float> = _playbackSpeed.asStateFlow()
+
     init {
         viewModelScope.launch {
             while (true) {
                 _currentPosition.value = player.value?.currentPosition ?: 0L
                 _duration.value = player.value?.duration ?: 0L
-                delay(1000)
+                delay(500) // Faster updates for smoother slider
             }
         }
     }
@@ -50,6 +53,20 @@ class PlayerViewModel @Inject constructor(
 
     fun seekTo(positionMs: Long) {
         playerManager.seekTo(positionMs)
+    }
+
+    fun setPlaybackSpeed(speed: Float) {
+        _playbackSpeed.value = speed
+        player.value?.let { 
+            it.setPlaybackSpeed(speed)
+        }
+    }
+
+    fun togglePlaybackSpeed() {
+        val speeds = listOf(1.0f, 1.25f, 1.5f, 2.0f, 0.5f, 0.75f)
+        val currentIndex = speeds.indexOf(_playbackSpeed.value)
+        val nextIndex = (currentIndex + 1) % speeds.size
+        setPlaybackSpeed(speeds[nextIndex])
     }
 
     override fun onCleared() {
