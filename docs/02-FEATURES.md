@@ -34,7 +34,7 @@
 ## AI Subtitle Generation — the core feature
 
 - Trigger subtitle generation for **any** currently playing video, from any source.
-- Choose a target language from a supported list; the app requests transcription (and translation if the target isn't the spoken language) from the developer's self-hosted Whisper Large API.
+- Choose a target language from a supported list; the app requests transcription (and translation if the target isn't the spoken language) from the self-hosted Whisper Large API.
 - Subtitles render as an overlay, synced to playback position, with adjustable size/color/background.
 - **Local files**: subtitle results are cached (tied to that file + chosen language) so regeneration isn't needed on replay.
 - **IPTV/live streams**: subtitles are generated in a rolling near-real-time fashion since the content isn't fixed; not cached.
@@ -42,7 +42,7 @@
 
 ## Settings
 
-- VPS/API endpoint configuration (since it's self-hosted, the developer may need to change the URL).
+- VPS/API endpoint configuration (since it's self-hosted, the URL can be updated as needed).
 - Default subtitle language and style preferences.
 - Storage/cache management (clear cached subtitles, clear playback history).
 - Theme (dark-first, possibly light mode later).

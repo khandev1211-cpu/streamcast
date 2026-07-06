@@ -3,7 +3,7 @@
 ## Sensitive data in this app
 
 - **IPTV credentials** (Xtream Codes username/password) — effectively account credentials for what's often a paid service.
-- **VPS API key** — grants access to the developer's personal subtitle inference server.
+- **VPS API key** — grants access to the private subtitle inference server.
 - **Audio content sent for transcription** — potentially private/personal video or audio content leaving the device.
 - **Local file paths/library contents** — not especially sensitive on their own, but still user data worth handling carefully.
 
@@ -35,8 +35,8 @@
 
 ## Privacy considerations around subtitle generation
 
-- Audio from the user's local files or live streams is sent to the developer's own VPS for processing — since this is a personal project (not a multi-user public service), this is more of a "know what you're building" consideration than a strict compliance one, but still worth being transparent about in-app (e.g., a brief note in Settings near the VPS config: "Audio is sent to your configured server for subtitle generation") so it's never a surprise to whoever ends up using the app.
-- If this app is ever shared with others (not just the developer), this becomes a genuine privacy disclosure requirement — worth keeping in mind if distribution plans change later.
+- Audio from the user's local files or live streams is sent to a private VPS for processing — since this is a personal project, this is more of a "know what you're building" consideration than a strict compliance one, but still worth being transparent about in-app (e.g., a brief note in Settings near the VPS config: "Audio is sent to your configured server for subtitle generation") so it's never a surprise to whoever ends up using the app.
+- If this app is ever shared with others, this becomes a genuine privacy disclosure requirement — worth keeping in mind if distribution plans change later.
 
 ## Dependency security
 

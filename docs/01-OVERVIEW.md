@@ -8,7 +8,7 @@
 2. **IPTV** — playlists (M3U/M3U8) and Xtream Codes provider logins, with EPG support.
 3. **Live streams** — IPTV channels plus any user-pasted HLS/DASH/RTMP URL.
 
-Its standout feature is **on-demand AI subtitle generation in any language**, for any video regardless of source, powered by a Whisper Large model self-hosted by the developer on a personal VPS.
+Its standout feature is **on-demand AI subtitle generation in any language**, for any video regardless of source, powered by a Whisper Large model self-hosted on a private VPS.
 
 A Windows version is planned for a later phase, built as a **separate native app** — this doc set does not assume shared code between Android and Windows.
 

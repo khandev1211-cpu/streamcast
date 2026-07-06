@@ -14,11 +14,11 @@
 | Image loading | Coil | Compose-friendly, lightweight, for any channel logos/thumbnails from IPTV metadata |
 | JSON parsing | kotlinx.serialization or Moshi | For VPS API responses and Xtream Codes API JSON |
 
-## Subtitle backend (developer-hosted VPS)
+## Subtitle backend (self-hosted VPS)
 
 | Component | Choice | Rationale |
 |---|---|---|
-| Model | Whisper Large | High transcription accuracy across many languages; developer already has this in mind |
+| Model | Whisper Large | High transcription accuracy across many languages |
 | Serving | Python + FastAPI (recommended) | Lightweight, async-friendly, easy to wrap a model inference call as a REST endpoint |
 | Reverse proxy | nginx | TLS termination, basic auth/API key enforcement, since this endpoint is personal infrastructure, not a public API |
 | Translation (non-English targets) | Separate step after Whisper transcription | Whisper's built-in `translate` task only outputs English; other target languages need a second translation call (see `11-TRANSLATION-STRATEGY.md`) |
@@ -36,8 +36,8 @@
 ## Explicitly not chosen (for now, and why)
 
 - **Kotlin Multiplatform (KMP)** — Windows is planned as a fully separate native build in a later phase, so there's no shared-codebase requirement driving KMP adoption right now. Revisit only if Windows work starts soon after Android ships.
-- **On-device Whisper (whisper.cpp or similar)** — skipped for MVP since the developer is self-hosting Whisper Large on a VPS already; could be added later purely as an offline fallback (see `02-FEATURES.md`, deferred features).
-- **A big-cloud STT/translation API (Google/Azure/AWS)** — skipped in favor of the self-hosted VPS approach the developer already intends to run; documented here so future contributors understand this was a deliberate choice, not an oversight.
+- **On-device Whisper (whisper.cpp or similar)** — skipped for MVP since a self-hosted Whisper Large instance is already in use; could be added later purely as an offline fallback (see `02-FEATURES.md`, deferred features).
+- **A big-cloud STT/translation API (Google/Azure/AWS)** — skipped in favor of the self-hosted VPS approach; documented here so future contributors understand this was a deliberate choice, not an oversight.
 
 ## Versioning note
 

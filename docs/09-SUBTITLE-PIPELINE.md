@@ -4,7 +4,7 @@ This is the app's core differentiator, so it's covered in depth here, with the V
 
 ## Goal
 
-Let a user generate subtitles, in a language of their choosing, for whatever is currently playing — local file, IPTV channel, or user-added live stream — using a Whisper Large model the developer runs on their own VPS.
+Let a user generate subtitles, in a language of their choosing, for whatever is currently playing — local file, IPTV channel, or user-added live stream — using a Whisper Large model running on a self-hosted VPS.
 
 ## High-level flow
 

@@ -1,6 +1,8 @@
-# StreamCast (working name) — Universal Media, IPTV & Live Player with AI Subtitles
+# StreamCast — Universal Media, IPTV & Live Player with AI Subtitles
 
-A modern Android app unifying local video/audio playback, IPTV (M3U/Xtream), and user-added live streams — with its standout feature: **on-demand AI-generated subtitles in any language**, powered by a self-hosted Whisper Large model on the developer's own VPS.
+**Developed by [khandev1211-cpu](https://github.com/khandev1211-cpu)**
+
+A modern Android app unifying local video/audio playback, IPTV (M3U/Xtream), and user-added live streams — with its standout feature: **on-demand AI-generated subtitles in any language**
 
 > Windows support is planned for a later phase as a fully separate native build — no shared codebase with Android in the current plan.
 

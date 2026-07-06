@@ -1,6 +1,6 @@
 # 10 — VPS Whisper API Setup
 
-This doc covers the backend the developer is setting up themselves: Whisper Large running in Python on a personal VPS, exposed as an API the Android app calls.
+This doc covers the backend setup: Whisper Large running in Python on a personal VPS, exposed as an API for the Android app.
 
 ## Recommended stack
 

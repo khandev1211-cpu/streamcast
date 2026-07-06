@@ -28,7 +28,7 @@
 
 **Rolling / one-shot subtitle modes** — This project's terminology for the two subtitle generation flows: one-shot (a full local file sent once) versus rolling (a continuously-updating buffer sent in chunks for IPTV/live content).
 
-**VPS (Virtual Private Server)** — A rented virtual server (as opposed to a big managed cloud AI service) where the developer self-hosts the Whisper-based subtitle inference API for this project.
+**VPS (Virtual Private Server)** — A rented virtual server (as opposed to a big managed cloud AI service) where the Whisper-based subtitle inference API is self-hosted for this project.
 
 **Kotlin Multiplatform (KMP)** — A Kotlin feature allowing shared business logic across platforms (e.g., Android and desktop/JVM); explicitly not adopted in this project's current plan, since Windows is a separate future build (see `23-WINDOWS-FUTURE-PLAN.md`).
 
