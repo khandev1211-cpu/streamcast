@@ -11,3 +11,4 @@ local.properties
 # System files
 .DS_Store
 Thumbs.db
+*.apk
