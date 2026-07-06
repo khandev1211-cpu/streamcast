@@ -1,14 +1,16 @@
-# Android Studio / IntelliJ
-.idea/
 *.iml
-.gradle/
-build/
-captures/
-.externalNativeBuild/
-.cxx/
-local.properties
-
-# System files
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
 .DS_Store
-Thumbs.db
-*.apk
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+Active document: C:/Users/CHAND COMPUTER/Desktop/WOrkSpace/streamcast/gradle/libs.versions.toml
