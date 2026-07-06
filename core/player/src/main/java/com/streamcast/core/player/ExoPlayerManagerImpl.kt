@@ -17,6 +17,7 @@ class ExoPlayerManagerImpl @Inject constructor(
 ) : PlayerManager, Player.Listener {
 
     private var exoPlayer: ExoPlayer? = null
+    override val player: Player? get() = exoPlayer
     private var currentMediaSource: MediaSource? = null
 
     private val _playbackState = MutableStateFlow<PlaybackState>(PlaybackState.Idle)

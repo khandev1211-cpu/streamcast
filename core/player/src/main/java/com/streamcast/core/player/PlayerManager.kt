@@ -1,5 +1,6 @@
 package com.streamcast.core.player
 
+import androidx.media3.common.Player
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -7,6 +8,7 @@ import kotlinx.coroutines.flow.StateFlow
  */
 interface PlayerManager {
     val playbackState: StateFlow<PlaybackState>
+    val player: Player?
     
     fun play(source: MediaSource)
     fun pause()

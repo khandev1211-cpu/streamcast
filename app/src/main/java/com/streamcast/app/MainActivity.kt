@@ -14,10 +14,16 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
+import android.net.Uri
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import com.streamcast.core.player.MediaSource
+import com.streamcast.core.player.SourceType
 import com.streamcast.feature.library.ui.LibraryScreen
+import com.streamcast.feature.library.ui.player.PlayerScreen
 import com.streamcast.ui.theme.StreamCastTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -57,9 +63,30 @@ class MainActivity : ComponentActivity() {
                         composable("library") {
                             LibraryScreen(
                                 onVideoClick = { video ->
-                                    // Navigate to player screen (to be implemented)
+                                    val encodedUri = Uri.encode(video.uri.toString())
+                                    navController.navigate("player/$encodedUri/${video.displayName}")
                                 }
                             )
+                        }
+                        composable(
+                            route = "player/{uri}/{name}",
+                            arguments = listOf(
+                                navArgument("uri") { type = NavType.StringType },
+                                navArgument("name") { type = NavType.StringType }
+                            )
+                        ) { backStackEntry ->
+                            val uri = Uri.parse(Uri.decode(backStackEntry.arguments?.getString("uri")))
+                            val name = backStackEntry.arguments?.getString("name") ?: "Video"
+                            
+                            val mediaSource = MediaSource(
+                                id = uri.toString(),
+                                uri = uri,
+                                type = SourceType.LOCAL,
+                                displayName = name,
+                                isCacheable = true
+                            )
+                            
+                            PlayerScreen(mediaSource = mediaSource)
                         }
                     }
                 }
