@@ -33,7 +33,7 @@ android {
 dependencies {
     implementation(project(":ui:theme"))
 
-    implementation(libs.androidx.core-ktx)
+    implementation(libs.androidx.core.ktx)
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
 }

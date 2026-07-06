@@ -31,7 +31,7 @@ android {
 }
 
 dependencies {
-    implementation(libs.androidx.core-ktx)
+    implementation(libs.androidx.core.ktx)
     
     // Room
     implementation(libs.androidx.room.runtime)
@@ -43,5 +43,5 @@ dependencies {
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso-core)
+    androidTestImplementation(libs.androidx.espresso.core)
 }

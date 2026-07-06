@@ -34,7 +34,7 @@ dependencies {
     implementation(project(":ui:theme"))
     implementation(project(":core:player"))
 
-    implementation(libs.androidx.core-ktx)
+    implementation(libs.androidx.core.ktx)
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
 }
