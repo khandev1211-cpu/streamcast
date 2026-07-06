@@ -15,77 +15,105 @@ import javax.inject.Inject
 class LibraryRepository @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
-    suspend fun getMediaFolders(): List<MediaFolder> = withContext(Dispatchers.IO) {
-        val foldersMap = mutableMapOf<String, MutableList<MediaSource>>()
+    /**
+     * Scans and returns media folders.
+     * @param rootPath if null, returns top-level folders that contain media.
+     * @param hierarchical if true, respects the file system hierarchy.
+     */
+    suspend fun getMediaFolders(rootPath: String? = null, hierarchical: Boolean = true): List<MediaFolder> = withContext(Dispatchers.IO) {
+        val allMedia = mutableListOf<Pair<String, MediaSource>>()
         
         // Scan Videos
-        val videoProjection = arrayOf(
-            MediaStore.Video.Media._ID,
-            MediaStore.Video.Media.DISPLAY_NAME,
-            MediaStore.Video.Media.DATA
-        )
-
-        context.contentResolver.query(
-            MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
-            videoProjection,
-            null,
-            null,
-            "${MediaStore.Video.Media.DATE_ADDED} DESC"
-        )?.use { cursor ->
-            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media._ID)
-            val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DISPLAY_NAME)
-            val dataColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DATA)
+        val videoProjection = arrayOf(MediaStore.Video.Media._ID, MediaStore.Video.Media.DISPLAY_NAME, MediaStore.Video.Media.DATA)
+        context.contentResolver.query(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, videoProjection, null, null, null)?.use { cursor ->
+            val idCol = cursor.getColumnIndexOrThrow(MediaStore.Video.Media._ID)
+            val nameCol = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DISPLAY_NAME)
+            val dataCol = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DATA)
             while (cursor.moveToNext()) {
-                val id = cursor.getLong(idColumn)
-                val name = cursor.getString(nameColumn)
-                val data = cursor.getString(dataColumn)
-                val contentUri = ContentUris.withAppendedId(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, id)
-                
-                val folderPath = File(data).parent ?: "Internal Storage"
-                val folderName = File(folderPath).name
-                
-                val mediaSource = MediaSource(id.toString(), contentUri, SourceType.LOCAL, name, true)
-                foldersMap.getOrPut(folderPath) { mutableListOf() }.add(mediaSource)
+                val path = cursor.getString(dataCol)
+                val uri = ContentUris.withAppendedId(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, cursor.getLong(idCol))
+                allMedia.add(path to MediaSource(cursor.getLong(idCol).toString(), uri, SourceType.LOCAL, cursor.getString(nameCol), true))
             }
         }
 
         // Scan Audio
-        val audioProjection = arrayOf(
-            MediaStore.Audio.Media._ID,
-            MediaStore.Audio.Media.DISPLAY_NAME,
-            MediaStore.Audio.Media.DATA
-        )
-
-        context.contentResolver.query(
-            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-            audioProjection,
-            null,
-            null,
-            "${MediaStore.Audio.Media.DATE_ADDED} DESC"
-        )?.use { cursor ->
-            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
-            val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DISPLAY_NAME)
-            val dataColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
+        val audioProjection = arrayOf(MediaStore.Audio.Media._ID, MediaStore.Audio.Media.DISPLAY_NAME, MediaStore.Audio.Media.DATA)
+        context.contentResolver.query(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, audioProjection, null, null, null)?.use { cursor ->
+            val idCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
+            val nameCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DISPLAY_NAME)
+            val dataCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
             while (cursor.moveToNext()) {
-                val id = cursor.getLong(idColumn)
-                val name = cursor.getString(nameColumn)
-                val data = cursor.getString(dataColumn)
-                val contentUri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id)
-                
-                val folderPath = File(data).parent ?: "Internal Storage"
-                
-                val mediaSource = MediaSource(id.toString(), contentUri, SourceType.LOCAL, name, true)
-                foldersMap.getOrPut(folderPath) { mutableListOf() }.add(mediaSource)
+                val path = cursor.getString(dataCol)
+                val uri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, cursor.getLong(idCol))
+                allMedia.add(path to MediaSource(cursor.getLong(idCol).toString(), uri, SourceType.LOCAL, cursor.getString(nameCol), true))
             }
         }
-        
-        foldersMap.map { (path, items) ->
-            MediaFolder(
-                name = File(path).name,
-                path = path,
-                mediaCount = items.size,
-                items = items
-            )
-        }.sortedBy { it.name }
+
+        if (!hierarchical) {
+            // Flat view: every folder with media is a top-level item
+            return@withContext allMedia.groupBy { File(it.first).parent ?: "Internal Storage" }
+                .map { (path, items) ->
+                    MediaFolder(name = File(path).name, path = path, mediaCount = items.size, items = items.map { it.second })
+                }.sortedBy { it.name }
+        } else {
+            // Hierarchical view logic
+            // For simplicity in this step, we return the folders at the current rootPath
+            val filteredMedia = if (rootPath == null) allMedia else allMedia.filter { it.first.startsWith(rootPath) }
+            
+            val folders = mutableMapOf<String, MutableList<MediaSource>>()
+            val subFoldersPaths = mutableSetOf<String>()
+
+            filteredMedia.forEach { (fullPath, media) ->
+                val file = File(fullPath)
+                val parentPath = file.parent ?: ""
+                
+                if (rootPath == null) {
+                    // Top level: we want the first directory after root (e.g. /sdcard/Movies -> Movies)
+                    // This is complex with absolute paths, let's simplify to "folders containing media"
+                    folders.getOrPut(parentPath) { mutableListOf() }.add(media)
+                } else {
+                    if (parentPath == rootPath) {
+                        folders.getOrPut(parentPath) { mutableListOf() }.add(media)
+                    } else {
+                        // It's in a subfolder. Find the direct subfolder of rootPath
+                        val relative = fullPath.substringAfter(rootPath).trimStart(File.separatorChar)
+                        val directSub = relative.substringBefore(File.separatorChar)
+                        if (directSub.isNotEmpty() && directSub != file.name) {
+                            subFoldersPaths.add(File(rootPath, directSub).absolutePath)
+                        }
+                    }
+                }
+            }
+
+            val result = mutableListOf<MediaFolder>()
+            
+            // Add subfolders (that we know contain media)
+            subFoldersPaths.forEach { path ->
+                val count = allMedia.count { it.first.startsWith(path) }
+                if (count > 0) {
+                    result.add(MediaFolder(name = File(path).name, path = path, mediaCount = count))
+                }
+            }
+
+            // Add files in this folder
+            if (rootPath != null) {
+                val files = folders[rootPath] ?: emptyList<MediaSource>()
+                // In hierarchical view, files are usually shown alongside folders
+                // We'll return a special MediaFolder or handle it in the UI
+            }
+            
+            // If rootPath is null, MX Player usually shows all folders that contain media in a flat list by default
+            // Let's stick to that "Flat List of Media Folders" as the default home view
+            if (rootPath == null) {
+                return@withContext allMedia.groupBy { File(it.first).parent ?: "Internal Storage" }
+                    .map { (path, items) ->
+                        MediaFolder(name = File(path).name, path = path, mediaCount = items.size, items = items.map { it.second })
+                    }.sortedBy { it.name }
+            }
+
+            return@withContext (result + folders.map { (path, items) -> 
+                MediaFolder(name = File(path).name, path = path, mediaCount = items.size, items = items)
+            }).distinctBy { it.path }.sortedBy { it.name }
+        }
     }
 }

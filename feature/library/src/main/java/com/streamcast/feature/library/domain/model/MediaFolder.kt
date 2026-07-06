@@ -5,6 +5,7 @@ import com.streamcast.core.player.MediaSource
 data class MediaFolder(
     val name: String,
     val path: String,
-    val mediaCount: Int,
-    val items: List<MediaSource> = emptyList()
+    val mediaCount: Int = 0,
+    val items: List<MediaSource> = emptyList(),
+    val subFolders: List<MediaFolder> = emptyList()
 )

@@ -27,6 +27,13 @@ class LibraryViewModel @Inject constructor(
     private val _conversionState = MutableStateFlow<ConversionState?>(null)
     val conversionState: StateFlow<ConversionState?> = _conversionState.asStateFlow()
 
+    // Navigation stack for folders
+    private val _folderStack = MutableStateFlow<List<MediaFolder>>(emptyList())
+    val folderStack: StateFlow<List<MediaFolder>> = _folderStack.asStateFlow()
+
+    private val _isHierarchical = MutableStateFlow(false) // Default to MX Player's "All Folders" flat view
+    val isHierarchical: StateFlow<Boolean> = _isHierarchical.asStateFlow()
+
     init {
         loadMedia()
     }
@@ -35,12 +42,33 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = LibraryUiState.Loading
             try {
-                val folders = repository.getMediaFolders()
+                val currentPath = _folderStack.value.lastOrNull()?.path
+                val folders = repository.getMediaFolders(currentPath, _isHierarchical.value)
                 _uiState.value = LibraryUiState.Success(folders)
             } catch (e: Exception) {
                 _uiState.value = LibraryUiState.Error(e.message ?: "Failed to load media")
             }
         }
+    }
+
+    fun navigateInto(folder: MediaFolder) {
+        _folderStack.value = _folderStack.value + folder
+        loadMedia()
+    }
+
+    fun navigateBack(): Boolean {
+        if (_folderStack.value.isNotEmpty()) {
+            _folderStack.value = _folderStack.value.dropLast(1)
+            loadMedia()
+            return true
+        }
+        return false
+    }
+
+    fun toggleViewMode() {
+        _isHierarchical.value = !_isHierarchical.value
+        _folderStack.value = emptyList()
+        loadMedia()
     }
 
     fun convertToAudio(video: MediaSource) {
