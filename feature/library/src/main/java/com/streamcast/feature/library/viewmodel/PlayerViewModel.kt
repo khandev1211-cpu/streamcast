@@ -29,14 +29,22 @@ class PlayerViewModel @Inject constructor(
     private val _playbackSpeed = MutableStateFlow(1.0f)
     val playbackSpeed: StateFlow<Float> = _playbackSpeed.asStateFlow()
 
+    private val _decoderType = MutableStateFlow("HW") // HW, SW
+    val decoderType: StateFlow<String> = _decoderType.asStateFlow()
+
     init {
         viewModelScope.launch {
             while (true) {
                 _currentPosition.value = player.value?.currentPosition ?: 0L
                 _duration.value = player.value?.duration ?: 0L
-                delay(500) // Faster updates for smoother slider
+                delay(500)
             }
         }
+    }
+
+    fun toggleDecoder() {
+        _decoderType.value = if (_decoderType.value == "HW") "SW" else "HW"
+        // In a real implementation, we would re-initialize the player with specific RenderersFactory
     }
 
     fun play(source: MediaSource) {
