@@ -1,16 +1,31 @@
+# Android Studio / IntelliJ
+.idea/
 *.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+.gradle/
+build/
+captures/
+.externalNativeBuild/
+.cxx/
 local.properties
-Active document: C:/Users/CHAND COMPUTER/Desktop/WOrkSpace/streamcast/gradle/libs.versions.toml
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+*.apk
+*.aab
+output.json
+
+# Log files
+*.log
+
+# Keystores
+*.jks
+*.keystore
+*.p12
+
+# Note: We COMMIT the gradle wrapper for CI/CD consistency
+# gradlew
+# gradlew.bat
+# gradle/wrapper/
