@@ -2,7 +2,17 @@
 
 ## Design direction
 
+**Explicit reference point: MX Player.** Layout, navigation, and player-screen interaction patterns follow MX Player's proven conventions rather than inventing a new interaction model — this app adds AI subtitles and IPTV/live sources on top of a layout users already know how to use.
+
 Dark-first, modern, minimal-chrome-during-playback. The player itself should feel like the star of the screen — controls fade away quickly, typography is clean, and navigation between Library/IPTV/Live/Subtitles/Settings is fast and unambiguous.
+
+### What "MX Player style" means concretely here
+
+- **Top tabs, not just bottom nav** — primary navigation (Library / IPTV / Live) sits as tabs at the top of the home screen, MX-Player-style, rather than relying only on bottom nav. Settings lives behind an overflow/menu icon rather than taking up a full tab slot.
+- **Grid-first local library, grouped by folder** — local videos display as a thumbnail grid, grouped by device folder first (mirroring how MX Player surfaces "Video" by folder before flattening to one list). A grid/list toggle remains available.
+- **Gesture-driven player screen** — swipe vertically on the left half of the screen for brightness, right half for volume; double-tap left/right to seek ±10s; pinch or double-tap-and-hold to resize/zoom video. These gestures work without any visible control, which is core to why MX Player's player screen feels fast.
+- **Minimal always-visible controls, everything else tucked into a corner menu** — the visible overlay is just a seek bar, play/pause, and prev/next. Subtitle language, audio track, playback speed, and subtitle styling live behind a single "more options" icon (top-right corner, MX-Player-style) rather than spread across the main overlay.
+- **Floating/pop-up window mode** — a resizable, draggable floating player window that persists over other apps, MX Player's signature feature. Treated as a Phase 4 polish item (see `22-ROADMAP.md`) since it requires overlay-window handling, but the player architecture (`06-PLAYBACK-ENGINE.md`) shouldn't preclude it later.
 
 ## Color
 
@@ -18,9 +28,11 @@ Dark-first, modern, minimal-chrome-during-playback. The player itself should fee
 
 ## Layout patterns
 
-- **Bottom navigation** (Library / IPTV / Live / Settings) — thumb-reachable, standard Android pattern, appropriate for a media app used one-handed often.
-- **Grid or list toggle** for local library and channel lists — grids suit visual browsing (thumbnails/logos), lists suit dense channel scanning; let users pick based on preference.
-- **Full-screen player** with auto-hiding controls — tap to reveal, auto-hide after a few seconds of inactivity, standard for video apps.
+- **Top tab bar** (Library / IPTV / Live) as the primary navigation, MX-Player-style, with Settings reached via an overflow icon rather than a fourth tab.
+- **Grid-first, folder-grouped local library** — thumbnails in a grid, grouped by folder by default; a toggle switches to a flat compact list for users who prefer scanning by filename.
+- **Channel lists (IPTV/Live)** default to a list view (denser, more scannable for potentially hundreds of channels) with channel logos as small leading icons, category headers, and a grid toggle available for users who prefer browsing by logo.
+- **Full-screen player** with auto-hiding controls and MX-Player-style gesture zones (see above) — tap to reveal controls, auto-hide after a few seconds of inactivity.
+- **Corner "more options" menu** on the player screen — a single icon opening a sheet/panel with subtitle language, subtitle styling, audio track, playback speed, and (for IPTV) EPG details, keeping the main overlay uncluttered.
 
 ## Subtitle-specific UI
 

@@ -17,7 +17,10 @@ class ExoPlayerManagerImpl @Inject constructor(
 ) : PlayerManager, Player.Listener {
 
     private var exoPlayer: ExoPlayer? = null
-    override val player: Player? get() = exoPlayer
+    
+    private val _playerState = MutableStateFlow<Player?>(null)
+    override val playerState: StateFlow<Player?> = _playerState.asStateFlow()
+
     private var currentMediaSource: MediaSource? = null
 
     private val _playbackState = MutableStateFlow<PlaybackState>(PlaybackState.Idle)
@@ -27,6 +30,7 @@ class ExoPlayerManagerImpl @Inject constructor(
         return exoPlayer ?: ExoPlayer.Builder(context).build().also {
             it.addListener(this)
             exoPlayer = it
+            _playerState.value = it
         }
     }
 
@@ -60,6 +64,7 @@ class ExoPlayerManagerImpl @Inject constructor(
         exoPlayer?.removeListener(this)
         exoPlayer?.release()
         exoPlayer = null
+        _playerState.value = null
         _playbackState.value = PlaybackState.Idle
     }
 

@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.StateFlow
  */
 interface PlayerManager {
     val playbackState: StateFlow<PlaybackState>
-    val player: Player?
+    val playerState: StateFlow<Player?>
     
     fun play(source: MediaSource)
     fun pause()

@@ -6,6 +6,8 @@ import androidx.annotation.OptIn
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -14,7 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -34,12 +36,16 @@ fun PlayerScreen(
     viewModel: PlayerViewModel = hiltViewModel()
 ) {
     val playbackState by viewModel.playbackState.collectAsState()
+    val player by viewModel.player.collectAsState()
     val currentPos by viewModel.currentPosition.collectAsState()
     val duration by viewModel.duration.collectAsState()
     
     var showControls by remember { mutableStateOf(true) }
     var isLocked by remember { mutableStateOf(false) }
     
+    var gestureType by remember { mutableStateOf("") }
+    var gestureValue by remember { mutableStateOf(0f) }
+
     LaunchedEffect(showControls, isLocked) {
         if (showControls && !isLocked) {
             delay(5000)
@@ -55,6 +61,29 @@ fun PlayerScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
+            .pointerInput(isLocked) {
+                if (isLocked) return@pointerInput
+                detectVerticalDragGestures(
+                    onDragStart = { offset ->
+                        gestureType = if (offset.x < size.width / 2) "Brightness" else "Volume"
+                    },
+                    onDragEnd = { gestureType = "" },
+                    onVerticalDrag = { _, dragAmount ->
+                        gestureValue -= dragAmount / 100f
+                    }
+                )
+            }
+            .pointerInput(isLocked) {
+                if (isLocked) return@pointerInput
+                detectHorizontalDragGestures(
+                    onDragStart = { gestureType = "Seek" },
+                    onDragEnd = { gestureType = "" },
+                    onHorizontalDrag = { _, dragAmount ->
+                        val seekDelta = (dragAmount * 100).toLong()
+                        viewModel.seekTo(currentPos + seekDelta)
+                    }
+                )
+            }
             .clickable { 
                 if (!isLocked) showControls = !showControls 
                 else showControls = true
@@ -71,10 +100,22 @@ fun PlayerScreen(
                 }
             },
             update = { playerView ->
-                playerView.player = viewModel.player
+                playerView.player = player
             },
             modifier = Modifier.fillMaxSize()
         )
+
+        // Gesture Indicator
+        if (gestureType.isNotEmpty()) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .background(Color.Black.copy(alpha = 0.5f), shape = MaterialTheme.shapes.medium)
+                    .padding(16.dp)
+            ) {
+                Text(gestureType, color = Color.White)
+            }
+        }
 
         AnimatedVisibility(
             visible = showControls,
@@ -93,7 +134,8 @@ fun PlayerScreen(
                     else viewModel.resume()
                 },
                 onLockToggle = { isLocked = !isLocked },
-                onSeek = { viewModel.seekTo(it) }
+                onSeek = { viewModel.seekTo(it) },
+                onGenerateSubtitles = { /* Launch Subtitle Generation */ }
             )
         }
     }
@@ -109,7 +151,8 @@ fun PlayerControlsOverlay(
     onBack: () -> Unit,
     onPlayPause: () -> Unit,
     onLockToggle: () -> Unit,
-    onSeek: (Long) -> Unit
+    onSeek: (Long) -> Unit,
+    onGenerateSubtitles: () -> Unit
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         if (!isLocked) {
@@ -132,16 +175,32 @@ fun PlayerControlsOverlay(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
+                
+                // Flagship Feature: Generate Subtitles
+                Button(
+                    onClick = onGenerateSubtitles,
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                    modifier = Modifier.padding(end = 8.dp)
+                ) {
+                    Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("AI Subtitles", style = MaterialTheme.typography.labelSmall)
+                }
+
+                IconButton(onClick = { /* More Menu */ }) {
+                    Icon(Icons.Default.MoreVert, contentDescription = "Options", tint = Color.White)
+                }
             }
 
-            // Center Controls
+            // Center Controls (MX Player: Previous, Play/Pause, Next)
             Row(
                 modifier = Modifier.align(Alignment.Center),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(24.dp)
+                horizontalArrangement = Arrangement.spacedBy(32.dp)
             ) {
-                IconButton(onClick = { onSeek(currentPosition - 10000) }) {
-                    Icon(Icons.Default.Replay10, contentDescription = "-10s", tint = Color.White, modifier = Modifier.size(48.dp))
+                IconButton(onClick = { /* Previous */ }) {
+                    Icon(Icons.Default.SkipPrevious, contentDescription = "Previous", tint = Color.White, modifier = Modifier.size(48.dp))
                 }
                 
                 IconButton(
@@ -149,15 +208,15 @@ fun PlayerControlsOverlay(
                     modifier = Modifier.size(80.dp)
                 ) {
                     Icon(
-                        imageVector = if (playbackState is PlaybackState.Playing) Icons.Default.PauseCircle else Icons.Default.PlayCircle,
+                        imageVector = if (playbackState is PlaybackState.Playing) Icons.Default.PauseCircleFilled else Icons.Default.PlayCircleFilled,
                         contentDescription = "Play/Pause",
                         tint = Color.White,
                         modifier = Modifier.fillMaxSize()
                     )
                 }
 
-                IconButton(onClick = { onSeek(currentPosition + 10000) }) {
-                    Icon(Icons.Default.Forward10, contentDescription = "+10s", tint = Color.White, modifier = Modifier.size(48.dp))
+                IconButton(onClick = { /* Next */ }) {
+                    Icon(Icons.Default.SkipNext, contentDescription = "Next", tint = Color.White, modifier = Modifier.size(48.dp))
                 }
             }
 
@@ -176,7 +235,12 @@ fun PlayerControlsOverlay(
                 Slider(
                     value = if (duration > 0) currentPosition.toFloat() / duration else 0f,
                     onValueChange = { onSeek((it * duration).toLong()) },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = SliderDefaults.colors(
+                        thumbColor = MaterialTheme.colorScheme.primary,
+                        activeTrackColor = MaterialTheme.colorScheme.primary,
+                        inactiveTrackColor = Color.Gray
+                    )
                 )
                 
                 Row(
@@ -188,12 +252,22 @@ fun PlayerControlsOverlay(
                         Icon(Icons.Default.LockOpen, contentDescription = "Lock", tint = Color.White)
                     }
                     
-                    IconButton(onClick = { /* Subtitle toggle */ }) {
-                        Icon(Icons.Default.Subtitles, contentDescription = "Subtitles", tint = Color.White)
+                    Row {
+                        IconButton(onClick = { /* Subtitle Language */ }) {
+                            Icon(Icons.Default.Subtitles, contentDescription = "Subtitles", tint = Color.White)
+                        }
+                        IconButton(onClick = { /* Audio Track */ }) {
+                            Icon(Icons.Default.AudioFile, contentDescription = "Audio", tint = Color.White)
+                        }
+                    }
+                    
+                    IconButton(onClick = { /* Resize */ }) {
+                        Icon(Icons.Default.AspectRatio, contentDescription = "Resize", tint = Color.White)
                     }
                 }
             }
         } else {
+            // Locked UI
             IconButton(
                 onClick = onLockToggle,
                 modifier = Modifier

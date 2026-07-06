@@ -18,7 +18,7 @@ class PlayerViewModel @Inject constructor(
 ) : ViewModel() {
 
     val playbackState = playerManager.playbackState
-    val player = playerManager.player
+    val player = playerManager.playerState
 
     private val _currentPosition = MutableStateFlow(0L)
     val currentPosition: StateFlow<Long> = _currentPosition.asStateFlow()
@@ -29,8 +29,8 @@ class PlayerViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             while (true) {
-                _currentPosition.value = player?.currentPosition ?: 0L
-                _duration.value = player?.duration ?: 0L
+                _currentPosition.value = player.value?.currentPosition ?: 0L
+                _duration.value = player.value?.duration ?: 0L
                 delay(1000)
             }
         }
