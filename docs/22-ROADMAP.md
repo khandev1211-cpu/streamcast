@@ -2,14 +2,15 @@
 
 ## Phase 0 — Foundation
 - [x] Define features, architecture, tech stack, and full documentation set
-- [ ] Set up Android project skeleton (multi-module structure per `05-PROJECT-STRUCTURE.md`)
-- [ ] Set up VPS: Whisper Large (or faster-whisper) + FastAPI `/transcribe` and `/health` endpoints, behind nginx + TLS + API key auth
+- [x] Set up Android project skeleton (multi-module structure)
+- [ ] Set up VPS: Whisper Large (or faster-whisper) + FastAPI `/transcribe` and `/health` endpoints
 
-## Phase 1 — Core Playback
-- [ ] `core/player` module: `PlayerManager` wrapping Media3/ExoPlayer
-- [ ] `feature/library`: local file scanning, browsing, playback, resume position
-- [ ] Base Compose navigation shell (bottom nav: Library / IPTV / Live / Settings)
-- [ ] Room DB schema v1 (`LocalMedia` at minimum)
+## Phase 1 — Core Playback (MX Player Style)
+- [x] `core/player` module: `PlayerManager` wrapping Media3/ExoPlayer
+- [x] `feature/library`: local file scanning, folder/subfolder navigation
+- [x] Advanced Player UI: Gestures (Vol/Bri/Seek), Pinch-to-zoom, Decoder toggle, Speed control
+- [x] Base Compose navigation (Bottom nav)
+- [x] Room DB schema v1
 
 ## Phase 2 — IPTV & Live Streams
 - [ ] M3U/M3U8 parser (with malformed-entry tolerance)
@@ -17,34 +18,31 @@
 - [ ] EPG/XMLTV parsing (optional metadata)
 - [ ] `feature/iptv` UI: source management, channel list, favorites, search
 - [ ] `feature/live` UI: add/manage user-pasted live URLs
-- [ ] Unified `Channel`/`MediaSource` playback path validated across both
 
-## Phase 3 — AI Subtitles
-- [ ] `core/network` VPS client (`VpsApiClient`, result wrapper, timeout tuning)
+## Phase 3 — AI Subtitles (Flagship Feature)
+- [ ] `core/network` VPS client (`VpsApiClient`, result wrapper)
 - [ ] Audio extraction (local, one-shot) and rolling buffer capture (IPTV/live)
 - [ ] `feature/subtitles`: language picker, generation state machine, cue rendering overlay
 - [ ] Local-file subtitle caching (Room `SubtitleCache`)
-- [ ] Translation step wired in on the VPS for non-English targets (see `11-TRANSLATION-STRATEGY.md`)
-- [ ] Error handling & VPS-down graceful degradation
+- [ ] Translation step wired in on the VPS
 
-## Phase 4 — Polish
-- [ ] Full UI/UX pass per `14-UI-UX-DESIGN-SYSTEM.md` (motion, subtitle styling controls, accessibility check)
-- [ ] Performance pass: buffer tuning, chunk size tuning, Compose recomposition audit (see `18-PERFORMANCE-OPTIMIZATION.md`)
-- [ ] Picture-in-Picture, background/audio-only playback via media session
-- [ ] Crash reporting integrated
-- [ ] Security checklist review (see `19-SECURITY-PRIVACY.md`)
+## Phase 4 — 2026 Vision & Polish (The "MX Pro" Level)
+- [ ] **AI-Powered "Scene Search"**: Use Whisper transcripts to search for specific moments within a video.
+- [ ] **Vertical "Fatafat" Feed**: A dedicated tab for scrolling through short vertical clips found on the device.
+- [ ] **Glassmorphism UI**: Dynamic backgrounds that adapt to the color of the current video thumbnail.
+- [ ] **Privacy Vault**: A PIN/Biometric-locked section for hiding specific folders and files.
+- [ ] **Floating Window Mode**: Fully resizable and draggable pop-up player for extreme multitasking.
+- [ ] **FAST Channel Engine**: Integrated linear streaming for "Live TV" without a provider login.
+- [ ] **WhatsApp Status Saver**: Automatically scanning and saving statuses.
 
 ## Phase 5 — Windows (separate build, later)
-- [ ] Decide Windows tech stack independently at that time — no shared codebase assumption carried over from Android
-- [ ] Port core feature set: local/IPTV/live playback, subtitle generation via the same VPS API (the VPS backend and its API contract are platform-agnostic already, which is the main reusable piece across both platforms)
+- [ ] Decide Windows tech stack independently
+- [ ] Port core feature set using the same VPS API
 
-## Deferred / not currently planned for MVP
+## Deferred
 - Chromecast/external display casting
 - Multi-profile support
 - Cloud sync of favorites/history across devices
-- On-device offline subtitle fallback (e.g., whisper.cpp) for VPS-down scenarios
-- Kotlin Multiplatform shared logic (revisit only if Windows work starts soon after Android ships)
 
-## Suggested immediate next step
-
-Once ready to move from docs to code: scaffold the Android project structure (Phase 0/1), and in parallel, stand up the VPS `/transcribe` + `/health` endpoints with a real Whisper Large model so the app's networking layer has something real to integrate against early, rather than building the subtitle feature purely against a mocked backend for too long.
+## Immediate Next Task
+We have completed the **MX Player style file system and advanced playback logic**. The next critical path is **Phase 2: IPTV Integration**, specifically building the M3U parser and the provider login screen.
