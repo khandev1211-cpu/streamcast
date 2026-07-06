@@ -13,46 +13,57 @@ import javax.inject.Inject
 class LibraryRepository @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
-    suspend fun getLocalVideos(): List<MediaSource> = withContext(Dispatchers.IO) {
-        val videoList = mutableListOf<MediaSource>()
-        val projection = arrayOf(
+    suspend fun getLocalMedia(): List<MediaSource> = withContext(Dispatchers.IO) {
+        val mediaList = mutableListOf<MediaSource>()
+        
+        // Scan Videos
+        val videoProjection = arrayOf(
             MediaStore.Video.Media._ID,
             MediaStore.Video.Media.DISPLAY_NAME,
-            MediaStore.Video.Media.DURATION,
-            MediaStore.Video.Media.SIZE
+            MediaStore.Video.Media.DURATION
         )
 
         context.contentResolver.query(
             MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
-            projection,
+            videoProjection,
             null,
             null,
             "${MediaStore.Video.Media.DATE_ADDED} DESC"
         )?.use { cursor ->
             val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media._ID)
             val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DISPLAY_NAME)
-            val durationColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DURATION)
-
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(idColumn)
                 val name = cursor.getString(nameColumn)
-                val duration = cursor.getLong(durationColumn)
-                val contentUri = ContentUris.withAppendedId(
-                    MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
-                    id
-                )
-
-                videoList.add(
-                    MediaSource(
-                        id = id.toString(),
-                        uri = contentUri,
-                        type = SourceType.LOCAL,
-                        displayName = name,
-                        isCacheable = true
-                    )
-                )
+                val contentUri = ContentUris.withAppendedId(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, id)
+                mediaList.add(MediaSource(id.toString(), contentUri, SourceType.LOCAL, name, true))
             }
         }
-        videoList
+
+        // Scan Audio
+        val audioProjection = arrayOf(
+            MediaStore.Audio.Media._ID,
+            MediaStore.Audio.Media.DISPLAY_NAME,
+            MediaStore.Audio.Media.DURATION
+        )
+
+        context.contentResolver.query(
+            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+            audioProjection,
+            null,
+            null,
+            "${MediaStore.Audio.Media.DATE_ADDED} DESC"
+        )?.use { cursor ->
+            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
+            val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DISPLAY_NAME)
+            while (cursor.moveToNext()) {
+                val id = cursor.getLong(idColumn)
+                val name = cursor.getString(nameColumn)
+                val contentUri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id)
+                mediaList.add(MediaSource(id.toString(), contentUri, SourceType.LOCAL, name, true))
+            }
+        }
+        
+        mediaList
     }
 }
