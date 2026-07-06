@@ -1,6 +1,11 @@
 package com.streamcast.feature.library.ui.player
 
 import android.app.Activity
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.BatteryManager
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.annotation.OptIn
@@ -23,6 +28,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.common.util.UnstableApi
@@ -32,6 +38,8 @@ import com.streamcast.core.player.MediaSource
 import com.streamcast.core.player.PlaybackState
 import com.streamcast.feature.library.viewmodel.PlayerViewModel
 import kotlinx.coroutines.delay
+import java.text.SimpleDateFormat
+import java.util.*
 
 @OptIn(UnstableApi::class)
 @Composable
@@ -53,13 +61,26 @@ fun PlayerScreen(
     var showControls by remember { mutableStateOf(true) }
     var isLocked by remember { mutableStateOf(false) }
     var resizeMode by remember { mutableStateOf(AspectRatioFrameLayout.RESIZE_MODE_FIT) }
-
-    // Pinch-to-zoom state
     var scale by remember { mutableStateOf(1f) }
-    
+
+    // System info states
+    var currentTime by remember { mutableStateOf("") }
+    var batteryLevel by remember { mutableStateOf(0) }
+
     // Gesture status
     var gestureType by remember { mutableStateOf("") } 
     var gestureProgress by remember { mutableStateOf(0f) }
+    var seekTarget by remember { mutableStateOf(0L) }
+
+    // Update time and battery
+    LaunchedEffect(Unit) {
+        while (true) {
+            currentTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
+            val batteryStatus: Intent? = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+            batteryLevel = batteryStatus?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: 0
+            delay(10000) // Update every 10s
+        }
+    }
 
     LaunchedEffect(showControls, isLocked) {
         if (showControls && !isLocked) {
@@ -76,7 +97,6 @@ fun PlayerScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
-            // Combined Gestures (Tap, Double Tap, Zoom, Swipes)
             .pointerInput(isLocked) {
                 if (isLocked) return@pointerInput
                 detectTapGestures(
@@ -115,6 +135,21 @@ fun PlayerScreen(
                     }
                 )
             }
+            .pointerInput(isLocked) {
+                if (isLocked) return@pointerInput
+                detectHorizontalDragGestures(
+                    onDragStart = { gestureType = "Seek"; seekTarget = currentPos },
+                    onDragEnd = { 
+                        viewModel.seekTo(seekTarget)
+                        gestureType = "" 
+                    },
+                    onHorizontalDrag = { _, dragAmount ->
+                        val delta = (dragAmount * 200).toLong()
+                        seekTarget = (seekTarget + delta).coerceIn(0L, duration)
+                        gestureProgress = if (duration > 0) seekTarget.toFloat() / duration else 0f
+                    }
+                )
+            }
     ) {
         AndroidView(
             factory = { ctx ->
@@ -138,8 +173,13 @@ fun PlayerScreen(
                 )
         )
 
+        // Gesture Overlay
         if (gestureType.isNotEmpty()) {
-            GestureIndicator(type = gestureType, progress = gestureProgress)
+            if (gestureType == "Seek") {
+                SeekIndicator(seekTarget, duration)
+            } else {
+                GestureIndicator(type = gestureType, progress = gestureProgress)
+            }
         }
 
         AnimatedVisibility(
@@ -154,6 +194,8 @@ fun PlayerScreen(
                 duration = duration,
                 playbackSpeed = playbackSpeed,
                 decoderType = decoderType,
+                currentTime = currentTime,
+                batteryLevel = batteryLevel,
                 isLocked = isLocked,
                 onBack = onBack,
                 onPlayPause = {
@@ -162,7 +204,7 @@ fun PlayerScreen(
                 },
                 onLockToggle = { isLocked = !isLocked },
                 onSeek = { viewModel.seekTo(it) },
-                onGenerateSubtitles = { /* Launch Subtitle Generation */ },
+                onGenerateSubtitles = { /* AI */ },
                 onToggleSpeed = { viewModel.togglePlaybackSpeed() },
                 onToggleDecoder = { viewModel.toggleDecoder() },
                 onToggleResize = {
@@ -172,7 +214,36 @@ fun PlayerScreen(
                         else -> AspectRatioFrameLayout.RESIZE_MODE_FIT
                     }
                     if (resizeMode == AspectRatioFrameLayout.RESIZE_MODE_FIT) scale = 1f
-                }
+                },
+                onPiP = { activity?.enterPictureInPictureMode() }
+            )
+        }
+    }
+}
+
+@Composable
+fun SeekIndicator(target: Long, total: Long) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .background(Color.Black.copy(alpha = 0.6f), shape = MaterialTheme.shapes.medium)
+                .padding(24.dp)
+        ) {
+            Text(
+                text = formatTime(target),
+                color = Color.White,
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "[ ${formatTime(target - total)} ]", // Relative time
+                color = Color.LightGray,
+                style = MaterialTheme.typography.bodySmall
             )
         }
     }
@@ -225,6 +296,8 @@ fun PlayerControlsOverlay(
     duration: Long,
     playbackSpeed: Float,
     decoderType: String,
+    currentTime: String,
+    batteryLevel: Int,
     isLocked: Boolean,
     onBack: () -> Unit,
     onPlayPause: () -> Unit,
@@ -233,45 +306,65 @@ fun PlayerControlsOverlay(
     onGenerateSubtitles: () -> Unit,
     onToggleSpeed: () -> Unit,
     onToggleDecoder: () -> Unit,
-    onToggleResize: () -> Unit
+    onToggleResize: () -> Unit,
+    onPiP: () -> Unit
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         if (!isLocked) {
-            // Top Bar
-            Row(
+            // Advanced Top Bar (MX Player style)
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(Color.Black.copy(alpha = 0.5f))
-                    .padding(8.dp),
-                verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                // Info Bar (Clock, Battery)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.BatteryStd, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
+                    Text(" $batteryLevel%", color = Color.White, fontSize = 10.sp, modifier = Modifier.padding(end = 8.dp))
+                    Text(currentTime, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 }
-                Text(
-                    text = mediaSource.displayName,
-                    color = Color.White,
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
                 
-                // Decoder Toggle
-                TextButton(onClick = onToggleDecoder) {
-                    Text(decoderType, color = Color.White, fontWeight = FontWeight.Bold)
-                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                    }
+                    Text(
+                        text = mediaSource.displayName,
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    
+                    // Decoder
+                    TextButton(onClick = onToggleDecoder) {
+                        Text(decoderType, color = Color.White, fontWeight = FontWeight.Bold)
+                    }
 
-                TextButton(onClick = onToggleSpeed) {
-                    Text("${playbackSpeed}x", color = Color.White, fontWeight = FontWeight.Bold)
-                }
+                    // Speed
+                    TextButton(onClick = onToggleSpeed) {
+                        Text("${playbackSpeed}x", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
 
-                IconButton(onClick = onGenerateSubtitles) {
-                    Icon(Icons.Default.AutoAwesome, contentDescription = "AI", tint = MaterialTheme.colorScheme.primary)
-                }
+                    IconButton(onClick = onPiP) {
+                        Icon(Icons.Default.PictureInPictureAlt, contentDescription = "PiP", tint = Color.White)
+                    }
 
-                IconButton(onClick = { /* More Menu */ }) {
-                    Icon(Icons.Default.MoreVert, contentDescription = "Options", tint = Color.White)
+                    IconButton(onClick = { /* More Menu */ }) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "Options", tint = Color.White)
+                    }
                 }
             }
 
@@ -299,7 +392,7 @@ fun PlayerControlsOverlay(
                 }
             }
 
-            // Bottom Bar
+            // Advanced Bottom Bar
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -332,6 +425,9 @@ fun PlayerControlsOverlay(
                     }
                     
                     Row {
+                        IconButton(onClick = onGenerateSubtitles) {
+                            Icon(Icons.Default.AutoAwesome, contentDescription = "AI Subtitles", tint = MaterialTheme.colorScheme.primary)
+                        }
                         IconButton(onClick = { /* Audio Menu */ }) {
                             Icon(Icons.Default.AudioFile, contentDescription = "Audio", tint = Color.White)
                         }
@@ -346,6 +442,7 @@ fun PlayerControlsOverlay(
                 }
             }
         } else {
+            // Locked UI - Only show lock button
             IconButton(
                 onClick = onLockToggle,
                 modifier = Modifier
@@ -359,8 +456,9 @@ fun PlayerControlsOverlay(
 }
 
 fun formatTime(ms: Long): String {
-    val totalSeconds = ms / 1000
+    val totalSeconds = Math.abs(ms) / 1000
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
-    return "%02d:%02d".format(minutes, seconds)
+    val sign = if (ms < 0) "-" else ""
+    return "$sign%02d:%02d".format(minutes, seconds)
 }
