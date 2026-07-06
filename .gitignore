@@ -1,0 +1,13 @@
+# Android Studio / IntelliJ
+.idea/
+*.iml
+.gradle/
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+local.properties
+
+# System files
+.DS_Store
+Thumbs.db
