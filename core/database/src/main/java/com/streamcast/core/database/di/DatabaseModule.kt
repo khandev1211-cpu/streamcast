@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.streamcast.core.database.AppDatabase
 import com.streamcast.core.database.dao.ChannelDao
+import com.streamcast.core.database.dao.LocalMediaDao
 import com.streamcast.core.database.dao.SubtitleCacheDao
 import dagger.Module
 import dagger.Provides
@@ -31,6 +32,9 @@ object DatabaseModule {
 
     @Provides
     fun provideChannelDao(db: AppDatabase): ChannelDao = db.channelDao()
+
+    @Provides
+    fun provideLocalMediaDao(db: AppDatabase): LocalMediaDao = db.localMediaDao()
 
     @Provides
     fun provideSubtitleCacheDao(db: AppDatabase): SubtitleCacheDao = db.subtitleCacheDao()

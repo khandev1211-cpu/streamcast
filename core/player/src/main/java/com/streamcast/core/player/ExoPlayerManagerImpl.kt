@@ -109,6 +109,10 @@ class ExoPlayerManagerImpl @Inject constructor(
         repeatJob?.cancel()
     }
 
+    override fun setVolume(volume: Float) {
+        exoPlayer?.volume = volume
+    }
+
     private fun startRepeatMonitor() {
         repeatJob?.cancel()
         repeatJob = scope.launch {

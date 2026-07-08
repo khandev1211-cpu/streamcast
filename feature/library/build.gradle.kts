@@ -39,6 +39,7 @@ android {
 dependencies {
     implementation(project(":ui:theme"))
     implementation(project(":core:player"))
+    implementation(project(":core:database"))
 
     implementation(libs.androidx.core.ktx)
     implementation(platform(libs.androidx.compose.bom))

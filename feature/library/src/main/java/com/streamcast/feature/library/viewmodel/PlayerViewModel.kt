@@ -2,7 +2,10 @@ package com.streamcast.feature.library.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.streamcast.core.database.dao.LocalMediaDao
+import com.streamcast.core.database.entities.LocalMedia
 import com.streamcast.core.player.MediaSource
+import com.streamcast.core.player.PlaybackState
 import com.streamcast.core.player.PlayerManager
 import com.streamcast.core.player.model.SubtitleSegment
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -23,7 +26,8 @@ sealed class SubtitleUiState {
 
 @HiltViewModel
 class PlayerViewModel @Inject constructor(
-    private val playerManager: PlayerManager
+    private val playerManager: PlayerManager,
+    private val localMediaDao: LocalMediaDao
 ) : ViewModel() {
 
     val playbackState = playerManager.playbackState
@@ -42,6 +46,17 @@ class PlayerViewModel @Inject constructor(
     private val _decoderType = MutableStateFlow("HW")
     val decoderType: StateFlow<String> = _decoderType.asStateFlow()
 
+    private val _volume = MutableStateFlow(1.0f)
+    val volume: StateFlow<Float> = _volume.asStateFlow()
+
+    // Subtitle Sync Offset (ms)
+    private val _subtitleSyncOffset = MutableStateFlow(0L)
+    val subtitleSyncOffset: StateFlow<Long> = _subtitleSyncOffset.asStateFlow()
+
+    // Resume Position
+    private val _resumePosition = MutableStateFlow<Long?>(null)
+    val resumePosition: StateFlow<Long?> = _resumePosition.asStateFlow()
+
     // Sleep Timer
     private val _sleepTimerMillis = MutableStateFlow<Long?>(null)
     val sleepTimerMillis: StateFlow<Long?> = _sleepTimerMillis.asStateFlow()
@@ -51,21 +66,78 @@ class PlayerViewModel @Inject constructor(
     private val _subtitleUiState = MutableStateFlow<SubtitleUiState>(SubtitleUiState.Idle)
     val subtitleUiState: StateFlow<SubtitleUiState> = _subtitleUiState.asStateFlow()
 
-    private val _activeSubtitleSegments = MutableStateFlow<List<SubtitleSegment>>(emptyList())
-    val activeSubtitleSegments: StateFlow<List<SubtitleSegment>> = _activeSubtitleSegments.asStateFlow()
+    private val _activeSegments = MutableStateFlow<List<SubtitleSegment>>(emptyList())
+    val activeSegments: StateFlow<List<SubtitleSegment>> = _activeSegments.asStateFlow()
+
+    private var lastSavedPosition = 0L
 
     init {
         viewModelScope.launch {
             while (true) {
-                _currentPosition.value = player.value?.currentPosition ?: 0L
-                _duration.value = player.value?.duration ?: 0L
+                val playerInstance = player.value
+                if (playerInstance != null) {
+                    _currentPosition.value = playerInstance.currentPosition
+                    _duration.value = playerInstance.duration
+                    
+                    // Periodically save position (every 10 seconds)
+                    if (Math.abs(_currentPosition.value - lastSavedPosition) > 10000) {
+                        saveCurrentPosition()
+                    }
+                }
                 delay(500)
             }
         }
     }
 
     fun play(source: MediaSource) {
-        playerManager.play(source)
+        viewModelScope.launch {
+            // Check for resume position
+            val savedMedia = localMediaDao.getById(source.id)
+            if (savedMedia != null && savedMedia.lastPositionMs > 5000) { // Only resume if > 5s
+                _resumePosition.value = savedMedia.lastPositionMs
+            }
+            
+            playerManager.play(source)
+        }
+    }
+
+    fun confirmResume() {
+        _resumePosition.value?.let { 
+            seekTo(it)
+            _resumePosition.value = null
+        }
+    }
+
+    fun dismissResume() {
+        _resumePosition.value = null
+    }
+
+    private fun saveCurrentPosition() {
+        val currentSource = playerManager.playbackState.value.let { state ->
+            when (state) {
+                is PlaybackState.Playing -> state.source
+                is PlaybackState.Paused -> state.source
+                else -> null
+            }
+        }
+
+        currentSource?.let { source ->
+            val pos = _currentPosition.value
+            lastSavedPosition = pos
+            viewModelScope.launch {
+                localMediaDao.insert(
+                    LocalMedia(
+                        id = source.id,
+                        filePath = source.uri.toString(),
+                        displayName = source.displayName,
+                        durationMs = _duration.value,
+                        lastPositionMs = pos,
+                        lastPlayedAt = System.currentTimeMillis(),
+                        addedAt = System.currentTimeMillis() // TODO: get from source if possible
+                    )
+                )
+            }
+        }
     }
 
     fun pause() {
@@ -94,6 +166,20 @@ class PlayerViewModel @Inject constructor(
 
     fun toggleDecoder() {
         _decoderType.value = if (_decoderType.value == "HW") "SW" else "HW"
+    }
+
+    fun setVolume(volume: Float) {
+        _volume.value = volume
+        playerManager.setVolume(volume)
+    }
+
+    fun setSubtitleSyncOffset(offsetMs: Long) {
+        _subtitleSyncOffset.value = offsetMs
+        // Media3 sync logic would go here if we were using its subtitle view
+    }
+
+    fun adjustSubtitleSyncOffset(deltaMs: Long) {
+        _subtitleSyncOffset.value += deltaMs
     }
 
     // A-B Repeat
@@ -135,7 +221,7 @@ class PlayerViewModel @Inject constructor(
                 SubtitleSegment(0f, 5f, "Hello, welcome to StreamCast!"),
                 SubtitleSegment(5.5f, 10f, "This is an AI-generated subtitle.")
             )
-            _activeSubtitleSegments.value = mockSegments
+            _activeSegments.value = mockSegments
             _subtitleUiState.value = SubtitleUiState.Active(mockSegments)
         }
     }

@@ -23,6 +23,8 @@ interface PlayerManager {
     // A-B Repeat Controls
     fun setAbRepeatRange(startMs: Long, endMs: Long)
     fun clearAbRepeatRange()
+
+    fun setVolume(volume: Float)
 }
 
 /**

@@ -92,16 +92,24 @@ fun LibraryScreen(
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
                 is LibraryUiState.Success -> {
+                    // In flat mode, if we're in a folder, we don't show other folders.
+                    // In hierarchical mode, we show subfolders returned by the repository.
+                    val foldersToShow = if (!isHierarchical && currentFolder != null) {
+                        emptyList()
+                    } else {
+                        state.folders
+                    }
+
                     if (isGridView) {
                         MediaGridContent(
-                            folders = state.folders,
+                            folders = foldersToShow,
                             mediaItems = currentFolder?.items ?: emptyList(),
                             onFolderClick = { viewModel.navigateInto(it) },
                             onMediaClick = onVideoClick
                         )
                     } else {
                         MediaListContent(
-                            folders = state.folders,
+                            folders = foldersToShow,
                             mediaItems = currentFolder?.items ?: emptyList(),
                             onFolderClick = { viewModel.navigateInto(it) },
                             onMediaClick = onVideoClick,

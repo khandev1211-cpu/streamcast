@@ -35,7 +35,9 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.streamcast.core.player.MediaSource
 import com.streamcast.core.player.PlaybackState
+import com.streamcast.core.player.model.SubtitleSegment
 import com.streamcast.feature.library.viewmodel.PlayerViewModel
+import com.streamcast.feature.library.viewmodel.SubtitleUiState
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.*
@@ -59,7 +61,9 @@ fun PlayerScreen(
     val abRange by viewModel.abRepeatRange.collectAsState()
     val sleepTimer by viewModel.sleepTimerMillis.collectAsState()
     val subtitleState by viewModel.subtitleUiState.collectAsState()
-    val activeSegments by viewModel.activeSubtitleSegments.collectAsState()
+    val activeSegments by viewModel.activeSegments.collectAsState()
+    val subtitleOffset by viewModel.subtitleSyncOffset.collectAsState()
+    val resumePos by viewModel.resumePosition.collectAsState()
     
     var showControls by remember { mutableStateOf(true) }
     var isLocked by remember { mutableStateOf(false) }
@@ -109,6 +113,13 @@ fun PlayerScreen(
                         val isRightSide = offset.x > size.width / 2
                         if (isRightSide) viewModel.seekTo(currentPos + 10000)
                         else viewModel.seekTo(currentPos - 10000)
+                    },
+                    onLongPress = {
+                        viewModel.setPlaybackSpeed(2.0f)
+                    },
+                    onPress = {
+                        tryAwaitRelease()
+                        viewModel.setPlaybackSpeed(1.0f)
                     }
                 )
             }
@@ -128,8 +139,11 @@ fun PlayerScreen(
                     onVerticalDrag = { _, dragAmount ->
                         val delta = -dragAmount / 500f
                         gestureProgress = (gestureProgress + delta).coerceIn(0f, 1f)
-                        if (gestureType == "Volume") player?.volume = gestureProgress
-                        else if (gestureType == "Brightness") {
+                        if (gestureType == "Volume") {
+                            // Volume boost up to 2.0 (200%)
+                            val vol = gestureProgress * 2.0f
+                            viewModel.setVolume(vol)
+                        } else if (gestureType == "Brightness") {
                             activity?.window?.let { window ->
                                 val params = window.attributes
                                 params.screenBrightness = gestureProgress
@@ -185,6 +199,18 @@ fun PlayerScreen(
             }
         }
 
+        if (playbackSpeed > 1.0f && !showControls) {
+             Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 64.dp)
+                    .background(Color.Black.copy(alpha = 0.6f), shape = MaterialTheme.shapes.medium)
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Text("Speed: ${playbackSpeed}x", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+            }
+        }
+
         AnimatedVisibility(
             visible = showControls,
             enter = fadeIn(),
@@ -223,7 +249,9 @@ fun PlayerScreen(
                 onPiP = { activity?.enterPictureInPictureMode() },
                 onSleepTimerClick = { showSleepTimerDialog = true },
                 onABRepeatClick = { showABRepeatControls = !showABRepeatControls },
-                onTrackSelectionClick = { showTrackSelectionDialog = true }
+                onTrackSelectionClick = { showTrackSelectionDialog = true },
+                subtitleOffset = subtitleOffset,
+                onAdjustOffset = { viewModel.adjustSubtitleSyncOffset(it) }
             )
         }
 
@@ -239,6 +267,7 @@ fun PlayerScreen(
 
         SubtitleOverlay(
             currentPosition = currentPos,
+            syncOffset = subtitleOffset,
             segments = activeSegments,
             state = subtitleState,
             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 80.dp)
@@ -261,24 +290,43 @@ fun PlayerScreen(
             onDismiss = { showTrackSelectionDialog = false }
         )
     }
+
+    resumePos?.let { pos ->
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissResume() },
+            title = { Text("Resume Playback") },
+            text = { Text("Do you want to resume from ${formatTime(pos)}?") },
+            confirmButton = {
+                Button(onClick = { viewModel.confirmResume() }) {
+                    Text("Resume")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissResume() }) {
+                    Text("Start from beginning")
+                }
+            }
+        )
+    }
 }
 
 @Composable
 fun SubtitleOverlay(
     currentPosition: Long,
-    segments: List<com.streamcast.core.player.model.SubtitleSegment>,
-    state: com.streamcast.feature.library.viewmodel.SubtitleUiState,
+    syncOffset: Long,
+    segments: List<SubtitleSegment>,
+    state: SubtitleUiState,
     modifier: Modifier = Modifier
 ) {
-    val currentSecond = currentPosition / 1000f
+    val currentSecond = (currentPosition + syncOffset) / 1000f
     val activeSegment = segments.find { currentSecond >= it.start && currentSecond <= it.end }
 
     Box(modifier = modifier.fillMaxWidth().padding(horizontal = 32.dp), contentAlignment = Alignment.Center) {
         when (state) {
-            is com.streamcast.feature.library.viewmodel.SubtitleUiState.Loading -> {
+            is SubtitleUiState.Loading -> {
                 CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
             }
-            is com.streamcast.feature.library.viewmodel.SubtitleUiState.Active -> {
+            is SubtitleUiState.Active -> {
                 activeSegment?.let { segment ->
                     Text(
                         text = segment.text,
@@ -292,7 +340,7 @@ fun SubtitleOverlay(
                     )
                 }
             }
-            is com.streamcast.feature.library.viewmodel.SubtitleUiState.Error -> {
+            is SubtitleUiState.Error -> {
                 Text(state.message, color = Color.Red, style = MaterialTheme.typography.labelSmall)
             }
             else -> {}
@@ -433,7 +481,9 @@ fun PlayerControlsOverlay(
     onPiP: () -> Unit,
     onSleepTimerClick: () -> Unit,
     onABRepeatClick: () -> Unit,
-    onTrackSelectionClick: () -> Unit
+    onTrackSelectionClick: () -> Unit,
+    subtitleOffset: Long = 0,
+    onAdjustOffset: (Long) -> Unit = {}
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         if (!isLocked) {
@@ -498,6 +548,26 @@ fun PlayerControlsOverlay(
 
                     IconButton(onClick = { /* More Menu */ }) {
                         Icon(Icons.Default.MoreVert, contentDescription = "Options", tint = Color.White)
+                    }
+                }
+
+                // Subtitle Sync Offset Quick Controls
+                if (subtitleOffset != 0L || true) { // Always show for now if in "Subtitles" mode
+                     Row(
+                        modifier = Modifier
+                            .align(Alignment.End)
+                            .padding(end = 16.dp, top = 8.dp)
+                            .background(Color.Black.copy(alpha = 0.4f), shape = MaterialTheme.shapes.small)
+                            .padding(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Sync: ${subtitleOffset}ms", color = Color.White, fontSize = 10.sp)
+                        IconButton(onClick = { onAdjustOffset(-100) }, modifier = Modifier.size(24.dp)) {
+                            Icon(Icons.Default.Remove, contentDescription = "-100ms", tint = Color.White)
+                        }
+                        IconButton(onClick = { onAdjustOffset(100) }, modifier = Modifier.size(24.dp)) {
+                            Icon(Icons.Default.Add, contentDescription = "+100ms", tint = Color.White)
+                        }
                     }
                 }
             }
