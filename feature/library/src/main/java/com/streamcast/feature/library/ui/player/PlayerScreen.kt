@@ -71,6 +71,8 @@ fun PlayerScreen(
     var resizeMode by remember { mutableStateOf(AspectRatioFrameLayout.RESIZE_MODE_FIT) }
     var scale by remember { mutableStateOf(1f) }
 
+    val mxBlue = Color(0xFF00A0E9)
+
     var currentTime by remember { mutableStateOf("") }
     var batteryLevel by remember { mutableStateOf(0) }
 
@@ -207,7 +209,7 @@ fun PlayerScreen(
                     .background(Color.Black.copy(alpha = 0.6f), shape = MaterialTheme.shapes.medium)
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
-                Text("Speed: ${playbackSpeed}x", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                Text("Speed: ${playbackSpeed}x", color = mxBlue, fontWeight = FontWeight.Bold)
             }
         }
 
@@ -253,7 +255,8 @@ fun PlayerScreen(
                 onTrackSelectionClick = { showTrackSelectionDialog = true },
                 onToggleTimeMode = { viewModel.toggleTimeMode() },
                 subtitleOffset = subtitleOffset,
-                onAdjustOffset = { viewModel.adjustSubtitleSyncOffset(it) }
+                onAdjustOffset = { viewModel.adjustSubtitleSyncOffset(it) },
+                mxBlue = mxBlue
             )
         }
 
@@ -272,7 +275,7 @@ fun PlayerScreen(
             syncOffset = subtitleOffset,
             segments = activeSegments,
             state = subtitleState,
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 120.dp)
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 140.dp)
         )
     }
 
@@ -487,7 +490,8 @@ fun PlayerControlsOverlay(
     onTrackSelectionClick: () -> Unit,
     onToggleTimeMode: () -> Unit,
     subtitleOffset: Long = 0,
-    onAdjustOffset: (Long) -> Unit = {}
+    onAdjustOffset: (Long) -> Unit = {},
+    mxBlue: Color = Color.Cyan
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         if (!isLocked) {
@@ -538,14 +542,14 @@ fun PlayerControlsOverlay(
                     }
 
                     IconButton(onClick = onGenerateSubtitles) {
-                        Icon(Icons.Default.Subtitles, contentDescription = "Subtitles", tint = if (abRange != null) MaterialTheme.colorScheme.primary else Color.White)
+                        Icon(Icons.Default.Subtitles, contentDescription = "Subtitles", tint = if (subtitleOffset != 0L) mxBlue else Color.White)
                     }
 
                     TextButton(onClick = onToggleDecoder) {
                         Text(decoderType, color = Color.White, fontWeight = FontWeight.Bold)
                     }
 
-                    IconButton(onClick = { /* More Menu - containing Speed, PiP, Sleep etc */ }) {
+                    IconButton(onClick = { /* More Menu */ }) {
                         Icon(Icons.Default.MoreVert, contentDescription = "Options", tint = Color.White)
                     }
                 }
@@ -576,47 +580,48 @@ fun PlayerControlsOverlay(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .background(Color.Black.copy(alpha = 0.5f))
-                    .padding(vertical = 8.dp)
+                    .padding(bottom = 16.dp)
             ) {
-                // Seekbar and Time
-                Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = formatTime(currentPosition),
-                            color = Color.White,
-                            style = MaterialTheme.typography.labelSmall,
-                            modifier = Modifier.clickable { onToggleTimeMode() }
-                        )
-                        Text(
-                            text = if (isTimeRemainingMode) "-${formatTime(duration - currentPosition)}" else formatTime(duration),
-                            color = Color.White,
-                            style = MaterialTheme.typography.labelSmall,
-                            modifier = Modifier.clickable { onToggleTimeMode() }
-                        )
-                    }
-                    
-                    Slider(
-                        value = if (duration > 0) currentPosition.toFloat() / duration else 0f,
-                        onValueChange = { onSeek((it * duration).toLong()) },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = SliderDefaults.colors(
-                            thumbColor = MaterialTheme.colorScheme.primary,
-                            activeTrackColor = MaterialTheme.colorScheme.primary,
-                            inactiveTrackColor = Color.Gray
-                        )
+                // Seekbar
+                Slider(
+                    value = if (duration > 0) currentPosition.toFloat() / duration else 0f,
+                    onValueChange = { onSeek((it * duration).toLong()) },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 0.dp).height(24.dp),
+                    colors = SliderDefaults.colors(
+                        thumbColor = mxBlue,
+                        activeTrackColor = mxBlue,
+                        inactiveTrackColor = Color.Gray.copy(alpha = 0.5f)
+                    )
+                )
+
+                // Time Row
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = formatTime(currentPosition),
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.clickable { onToggleTimeMode() }
+                    )
+                    Text(
+                        text = if (isTimeRemainingMode) "-${formatTime(duration - currentPosition)}" else formatTime(duration),
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.clickable { onToggleTimeMode() }
                     )
                 }
 
+                Spacer(modifier = Modifier.height(8.dp))
+
                 // Playback Buttons Row (MX PLAYER STYLE)
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Left Corner: Lock
+                    // Left: Lock
                     IconButton(onClick = onLockToggle) {
                         Icon(Icons.Default.LockOpen, contentDescription = "Lock", tint = Color.White)
                     }
@@ -624,16 +629,16 @@ fun PlayerControlsOverlay(
                     // Center: Controls
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(24.dp)
                     ) {
-                        IconButton(onClick = { /* Previous */ }) {
+                        IconButton(onClick = { /* Previous */ }, modifier = Modifier.size(32.dp)) {
                             Icon(Icons.Default.SkipPrevious, contentDescription = "Prev", tint = Color.White)
                         }
-                        IconButton(onClick = { onSeek(currentPosition - 10000) }) {
+                        IconButton(onClick = { onSeek(currentPosition - 10000) }, modifier = Modifier.size(32.dp)) {
                             Icon(Icons.Default.Replay10, contentDescription = "-10s", tint = Color.White)
                         }
                         
-                        IconButton(onClick = onPlayPause, modifier = Modifier.size(56.dp)) {
+                        IconButton(onClick = onPlayPause, modifier = Modifier.size(64.dp)) {
                             Icon(
                                 imageVector = if (playbackState is PlaybackState.Playing) Icons.Default.PauseCircle else Icons.Default.PlayCircle,
                                 contentDescription = "Play/Pause",
@@ -642,15 +647,15 @@ fun PlayerControlsOverlay(
                             )
                         }
 
-                        IconButton(onClick = { onSeek(currentPosition + 10000) }) {
+                        IconButton(onClick = { onSeek(currentPosition + 10000) }, modifier = Modifier.size(32.dp)) {
                             Icon(Icons.Default.Forward10, contentDescription = "+10s", tint = Color.White)
                         }
-                        IconButton(onClick = { /* Next */ }) {
+                        IconButton(onClick = { /* Next */ }, modifier = Modifier.size(32.dp)) {
                             Icon(Icons.Default.SkipNext, contentDescription = "Next", tint = Color.White)
                         }
                     }
 
-                    // Right Corner: Features (Speed / Pip / Resize)
+                    // Right: Features (Speed / Pip / Resize)
                     Row {
                         IconButton(onClick = onToggleSpeed) {
                             Text("${playbackSpeed}x", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
@@ -679,9 +684,7 @@ fun PlayerControlsOverlay(
         }
     }
     
-    // Silence warnings for now by putting these in a logic block that's always true or similar if needed, 
-    // or better, actually use them in a "More Menu" or similar.
-    // I'll add them to a simple dropdown for now.
+    // Logic for other dialogs is handled outside this composable in the main PlayerScreen
 }
 
 fun formatTime(ms: Long): String {

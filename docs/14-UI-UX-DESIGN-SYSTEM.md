@@ -19,13 +19,18 @@ Dark-first, modern, minimal-chrome-during-playback. The player itself should fee
   - **Double Tap (Center):** Play or Pause the video.
   - **Double Tap (Sides):** Seek ±10s.
   - **Long Press:** Temporary 2x speed boost.
-  - **Two-finger Vertical Swipe:** Adjust **Playback Speed** (Stage 4).
-- **Control Bar Organization**:
-  - **Top Bar**: Back button, Title, Track Selection (Audio/Subtitle), Decoder Type (HW/SW), and Menu (Three-dot).
+  - **Two-finger Vertical Swipe:** Adjust **Playback Speed** (0.25x to 4x).
+- **Control Bar Organization (Current 2024/2025 style)**:
+  - **Top Bar**: Back button (left), Title, then right-aligned: [Chromecast (deferred)] [Audio Track] [Subtitle Toggle] [Decoder Mode (HW/SW)] [More Menu].
   - **Bottom Bar**: 
-    - **Seekbar**: Full width, showing elapsed time (left) and total/remaining time (right). Tapping elapsed time toggles "Time Remaining" mode.
-    - **Playback Row**: Center-aligned icons for *Previous, Rewind (10s), Play/Pause, Fast Forward (10s), and Next*.
-    - **Corners**: Lock icon (Bottom Left), Resize/Aspect Ratio icon (Bottom Right).
+    - **Seekbar**: Thin line at the top of the bottom section.
+    - **Time Row**: Just below the seekbar, [Elapsed Time] (left) and [Total/Remaining Time] (right).
+    - **Playback Row**: Below the times, center-aligned icons: [Previous] [Rewind (10s)] [Play/Pause (large circle)] [Forward (10s)] [Next].
+    - **Corner Floating Icons**: Lock icon (Bottom Left), Screen Rotation/Resize (Bottom Right).
+- **Visual Style**:
+  - Semi-transparent gradient/overlay on top and bottom bars.
+  - MX Blue (`#00A0E9`) used for progress bar and active toggles.
+  - Minimalist, thin white iconography.
 
 ## Color
 
