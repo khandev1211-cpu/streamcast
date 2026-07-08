@@ -11,9 +11,21 @@ Dark-first, modern, minimal-chrome-during-playback. The player itself should fee
 - **Bottom navigation bar** — primary navigation (Video / Audio / IPTV / Profile) sits at the bottom of the screen for easy thumb access, while keeping the player screen full-screen and immersive.
 - **Library split by media type** — local media is split into dedicated "Video" and "Audio" sections in the bottom nav, making it easier for users to jump directly to what they want to play.
 - **Profile/Settings integrated** — a dedicated "Profile" or "Settings" tab in the bottom nav for quick access to backend configuration and app preferences.
-- **Gesture-driven player screen** — swipe vertically on the left half of the screen for brightness, right half for volume; double-tap left/right to seek ±10s; pinch or double-tap-and-hold to resize/zoom video. These gestures work without any visible control, which is core to why MX Player's player screen feels fast.
-- **Minimal always-visible controls, everything else tucked into a corner menu** — the visible overlay is just a seek bar, play/pause, and prev/next. Subtitle language, audio track, playback speed, and subtitle styling live behind a single "more options" icon (top-right corner, MX-Player-style) rather than spread across the main overlay.
-- **Floating/pop-up window mode** — a resizable, draggable floating player window that persists over other apps, MX Player's signature feature. Treated as a Phase 4 polish item (see `22-ROADMAP.md`) since it requires overlay-window handling, but the player architecture (`06-PLAYBACK-ENGINE.md`) shouldn't preclude it later.
+- **Gesture-driven player screen** — 
+  - **Left Half (Vertical Swipe):** Screen **Brightness**.
+  - **Right Half (Vertical Swipe):** **Volume**.
+  - **Horizontal Swipe:** **Seeking** (moving forward or backward).
+  - **Pinch-to-Zoom:** Zoom in or out of the video frame.
+  - **Double Tap (Center):** Play or Pause the video.
+  - **Double Tap (Sides):** Seek ±10s.
+  - **Long Press:** Temporary 2x speed boost.
+  - **Two-finger Vertical Swipe:** Adjust **Playback Speed** (Stage 4).
+- **Control Bar Organization**:
+  - **Top Bar**: Back button, Title, Track Selection (Audio/Subtitle), Decoder Type (HW/SW), and Menu (Three-dot).
+  - **Bottom Bar**: 
+    - **Seekbar**: Full width, showing elapsed time (left) and total/remaining time (right). Tapping elapsed time toggles "Time Remaining" mode.
+    - **Playback Row**: Center-aligned icons for *Previous, Rewind (10s), Play/Pause, Fast Forward (10s), and Next*.
+    - **Corners**: Lock icon (Bottom Left), Resize/Aspect Ratio icon (Bottom Right).
 
 ## Color
 

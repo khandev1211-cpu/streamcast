@@ -26,9 +26,9 @@ MX Player is the explicit UX/feature reference for this app. This doc is a featu
 | MX Player feature | Plan for this app |
 |---|---|
 | Tap to show/hide controls, auto-hide after ~3s | Same |
-| Bottom bar: play/pause, seek bar, current/total time | Same |
-| Top bar: back button, title, cast icon, more-options icon | Same, "cast icon" deferred (later phase), more-options icon central to this app's design |
-| Lock icon (disables all touch except unlock) | Same |
+| Bottom bar: play/pause, seek bar, current/total time | Same — Seekbar with toggleable Time Remaining; Playback row with Prev/Rew/Play/FF/Next |
+| Top bar: back button, title, track selection, decoder, more-options icon | Same — Back, Title, Audio/Subtitle toggles, Decoder button, Menu |
+| Lock icon (disables all touch except unlock) | Same — Positioned in Bottom Left corner |
 | Prev/next (for folder/playlist navigation) | Same, applies to Library tab and IPTV channel-list navigation |
 | Bottom-right: aspect ratio / zoom toggle (fit, fill, crop, stretch) | Same |
 | Bottom-left or corner: subtitle toggle icon | Same, but opens this app's AI subtitle flow in addition to any existing subtitle track |

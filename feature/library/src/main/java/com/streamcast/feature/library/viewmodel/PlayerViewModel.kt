@@ -49,6 +49,9 @@ class PlayerViewModel @Inject constructor(
     private val _volume = MutableStateFlow(1.0f)
     val volume: StateFlow<Float> = _volume.asStateFlow()
 
+    private val _isTimeRemainingMode = MutableStateFlow(false)
+    val isTimeRemainingMode: StateFlow<Boolean> = _isTimeRemainingMode.asStateFlow()
+
     // Subtitle Sync Offset (ms)
     private val _subtitleSyncOffset = MutableStateFlow(0L)
     val subtitleSyncOffset: StateFlow<Long> = _subtitleSyncOffset.asStateFlow()
@@ -171,6 +174,10 @@ class PlayerViewModel @Inject constructor(
     fun setVolume(volume: Float) {
         _volume.value = volume
         playerManager.setVolume(volume)
+    }
+
+    fun toggleTimeMode() {
+        _isTimeRemainingMode.value = !_isTimeRemainingMode.value
     }
 
     fun setSubtitleSyncOffset(offsetMs: Long) {
