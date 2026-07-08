@@ -263,6 +263,16 @@ fun PlayerScreen(
                 onToggleTimeMode = { viewModel.toggleTimeMode() },
                 onPrev = { viewModel.playPrevious() },
                 onNext = { viewModel.playNext() },
+                onRotate = {
+                    activity?.let {
+                        val current = it.requestedOrientation
+                        it.requestedOrientation = if (current == android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE) {
+                            android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                        } else {
+                            android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                        }
+                    }
+                },
                 subtitleOffset = subtitleOffset,
                 onAdjustOffset = { viewModel.adjustSubtitleSyncOffset(it) },
                 mxBlue = mxBlue
@@ -506,6 +516,7 @@ fun PlayerControlsOverlay(
     onToggleTimeMode: () -> Unit,
     onPrev: () -> Unit,
     onNext: () -> Unit,
+    onRotate: () -> Unit,
     subtitleOffset: Long = 0,
     onAdjustOffset: (Long) -> Unit = {},
     mxBlue: Color = Color.Cyan
@@ -604,7 +615,7 @@ fun PlayerControlsOverlay(
                     IconButton(onClick = { /* Headphones */ }) {
                         Icon(Icons.Default.Headphones, contentDescription = "Audio Output", tint = Color.White, modifier = Modifier.size(20.dp))
                     }
-                    IconButton(onClick = { /* Rotate */ }) {
+                    IconButton(onClick = onRotate) {
                         Icon(Icons.Default.ScreenRotation, contentDescription = "Rotate", tint = Color.White, modifier = Modifier.size(20.dp))
                     }
                     IconButton(onClick = { showExpandedShortcuts = !showExpandedShortcuts }) {
@@ -739,6 +750,9 @@ fun PlayerControlsOverlay(
                     }
 
                     Row {
+                        IconButton(onClick = onRotate) {
+                            Icon(Icons.Default.ScreenRotation, contentDescription = "Rotate", tint = Color.White)
+                        }
                         IconButton(onClick = onToggleResize) {
                             Icon(Icons.Default.AspectRatio, contentDescription = "Resize", tint = Color.White)
                         }
