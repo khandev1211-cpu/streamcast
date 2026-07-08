@@ -8,36 +8,18 @@ Dark-first, modern, minimal-chrome-during-playback. The player itself should fee
 
 ### What "MX Player style" means concretely here
 
-- **Bottom navigation bar** — primary navigation (Video / Audio / IPTV / Profile) sits at the bottom of the screen for easy thumb access, while keeping the player screen full-screen and immersive.
-- **Library split by media type** — local media is split into dedicated "Video" and "Audio" sections in the bottom nav, making it easier for users to jump directly to what they want to play.
-- **Profile/Settings integrated** — a dedicated "Profile" or "Settings" tab in the bottom nav for quick access to backend configuration and app preferences.
-- **Gesture-driven player screen** — 
-  - **Left Half (Vertical Swipe):** Screen **Brightness**.
-  - **Right Half (Vertical Swipe):** **Volume**.
-  - **Horizontal Swipe:** **Seeking** (moving forward or backward).
-  - **Pinch-to-Zoom:** Zoom in or out of the video frame.
-  - **Double Tap (Center):** Play or Pause the video.
-  - **Double Tap (Sides):** Seek ±10s.
-  - **Long Press:** Temporary 2x speed boost.
-  - **Two-finger Vertical Swipe:** Adjust **Playback Speed** (0.25x to 4x).
-- **Control Bar Organization (Current 2024/2025 style)**:
-  - **Top Bar**: Back button (left), Title, then right-aligned: [Chromecast (deferred)] [Audio Track] [Subtitle Toggle] [Decoder Mode (HW/SW)] [More Menu].
-  - **Bottom Bar**: 
-    - **Seekbar**: Thin line at the top of the bottom section.
-    - **Time Row**: Just below the seekbar, [Elapsed Time] (left) and [Total/Remaining Time] (right).
-    - **Playback Row**: Below the times, center-aligned icons: [Previous] [Rewind (10s)] [Play/Pause (large circle)] [Forward (10s)] [Next].
-    - **Corner Floating Icons**: Lock icon (Bottom Left), Screen Rotation/Resize (Bottom Right).
-- **Visual Style**:
-  - Semi-transparent gradient/overlay on top and bottom bars.
-  - MX Blue (`#00A0E9`) used for progress bar and active toggles.
-  - Minimalist, thin white iconography.
+- **Top tabs, not just bottom nav** — primary navigation (Library / IPTV / Live) sits as tabs at the top of the home screen, MX-Player-style, rather than relying only on bottom nav. Settings lives behind an overflow/menu icon rather than taking up a full tab slot.
+- **Grid-first local library, grouped by folder** — local videos display as a thumbnail grid, grouped by device folder first (mirroring how MX Player surfaces "Video" by folder before flattening to one list). A grid/list toggle remains available.
+- **Gesture-driven player screen** — swipe vertically on the left half of the screen for brightness, right half for volume; double-tap left/right to seek ±10s; pinch or double-tap-and-hold to resize/zoom video. These gestures work without any visible control, which is core to why MX Player's player screen feels fast.
+- **Minimal always-visible controls, everything else tucked into a corner menu** — the visible overlay is just a seek bar, play/pause, and prev/next. Subtitle language, audio track, playback speed, and subtitle styling live behind a single "more options" icon (top-right corner, MX-Player-style) rather than spread across the main overlay.
+- **Floating/pop-up window mode** — a resizable, draggable floating player window that persists over other apps, MX Player's signature feature. Treated as a Phase 4 polish item (see `22-ROADMAP.md`) since it requires overlay-window handling, but the player architecture (`06-PLAYBACK-ENGINE.md`) shouldn't preclude it later.
 
 ## Color
 
 - **Base**: near-black background (not pure `#000000` — a very dark neutral, e.g., `#0E0E12`, reduces harsh contrast and OLED smearing artifacts while still feeling "dark mode").
 - **Surface elevation**: slightly lighter dark tones for cards/sheets (channel lists, settings panels) to create depth without relying on shadows, which read poorly on dark backgrounds.
 - **Accent color**: a single vibrant accent (e.g., a saturated blue or purple) used sparingly — for the play button, active nav item, and the "Generate Subtitles" call-to-action specifically, since that's the differentiating feature and deserves visual emphasis.
-- **Semantic colors**: distinct, consistent colors for error states (stream failed, backend unreachable) vs. informational states (buffering, syncing) — don't reuse the accent color for both success and error contexts.
+- **Semantic colors**: distinct, consistent colors for error states (stream failed, VPS unreachable) vs. informational states (buffering, syncing) — don't reuse the accent color for both success and error contexts.
 
 ## Typography
 
@@ -46,8 +28,8 @@ Dark-first, modern, minimal-chrome-during-playback. The player itself should fee
 
 ## Layout patterns
 
-- **Bottom navigation bar** (Video / Audio / IPTV / Profile) as the primary navigation, ensuring the most common destinations are always one tap away.
-- **Grid-first, folder-grouped libraries** — thumbnails in a grid for Video and list/grid for Audio, grouped by folder by default; a toggle switches to a flat compact list for users who prefer scanning by filename.
+- **Top tab bar** (Library / IPTV / Live) as the primary navigation, MX-Player-style, with Settings reached via an overflow icon rather than a fourth tab.
+- **Grid-first, folder-grouped local library** — thumbnails in a grid, grouped by folder by default; a toggle switches to a flat compact list for users who prefer scanning by filename.
 - **Channel lists (IPTV/Live)** default to a list view (denser, more scannable for potentially hundreds of channels) with channel logos as small leading icons, category headers, and a grid toggle available for users who prefer browsing by logo.
 - **Full-screen player** with auto-hiding controls and MX-Player-style gesture zones (see above) — tap to reveal controls, auto-hide after a few seconds of inactivity.
 - **Corner "more options" menu** on the player screen — a single icon opening a sheet/panel with subtitle language, subtitle styling, audio track, playback speed, and (for IPTV) EPG details, keeping the main overlay uncluttered.
@@ -58,7 +40,7 @@ Dark-first, modern, minimal-chrome-during-playback. The player itself should fee
 - **Language picker**: a searchable bottom sheet or dropdown, not a long unfiltered list, given the number of languages Whisper supports.
 - **Loading state**: a subtle progress indicator near the subtitle area itself (not a full-screen blocking spinner) so users can keep watching while subtitles generate.
 - **Subtitle styling controls**: size, color, background opacity — exposed in Settings and/or a quick-access overlay during playback, since readability varies a lot by content and personal preference.
-- **Error state**: a small, dismissible inline message ("Couldn't reach subtitle server — check your connection or backend status") rather than an intrusive dialog that interrupts playback.
+- **Error state**: a small, dismissible inline message ("Couldn't reach subtitle server — check your connection or VPS status") rather than an intrusive dialog that interrupts playback.
 
 ## Motion
 
@@ -78,3 +60,97 @@ Dark-first, modern, minimal-chrome-during-playback. The player itself should fee
 - A single `PlayerControlsOverlay` composable is shared across all playback contexts (local/IPTV/live), with subtitle controls always present but EPG "now/next" info conditionally shown only when available.
 
 See `15-NAVIGATION-SCREENS.md` for the full screen inventory and navigation graph.
+
+---
+
+## Exact Screen-by-Screen Reference (from MX Player reference screenshots)
+
+The following locks down precise layout details captured directly from MX Player screenshots, so the build matches pixel-for-pixel behavior, not just the general idea.
+
+### Local Library screen (equivalent to MX Player's "Download"/folder browser)
+
+**Top bar:**
+- Back arrow (left)
+- Screen title (e.g., "Local" / current folder name)
+- Right-aligned icon row: folder/browse icon, search icon, layout-toggle icon (switches grid/list)
+
+**Folders section:**
+- Section label ("Folders")
+- Each folder row: folder icon (with a small red badge showing unwatched/new item count when applicable), folder name, subtext line showing item count + total size (e.g., "6 folders · 90 GB")
+
+**Videos section (below Folders):**
+- Section label ("Videos")
+- Each video row: left-aligned thumbnail (with duration badge overlaid bottom-left, e.g., "01:18"), title (up to 2 lines, truncated with ellipsis), subtext row showing file size + date (e.g., "5.3 MB · 22 Jun"), three-dot overflow menu icon on the far right of each row
+- List is scrollable; a floating circular play button (bottom-right, accent-colored) appears as a persistent quick-play/resume action
+
+**Bottom navigation bar (4 tabs):**
+- **Local** (folder icon) — local library, current screen
+- **Music** (music-note icon) — audio-only library view
+- **Screen** (replaces MX Player's "Transfer" tab) — this app's dedicated screen for casting/screen-related functionality rather than MX Player's Wi-Fi file-transfer feature; icon should visually imply "screen/display" (e.g., a monitor or cast-style icon) rather than the transfer arrows MX Player uses
+- **Me** (profile icon) — settings/profile entry point
+
+### Player screen — top bar
+
+- Back arrow (left)
+- Title, up to 2 lines, truncated with ellipsis
+- Right-aligned icon row, in order: playing-queue/cast-style icon, music-note icon, equalizer/mixer icon, decoder badge ("HW+" — indicates hardware decoding is active, tappable to toggle), three-dot overflow menu
+
+### Player screen — quick-tool icon row (appears with controls)
+
+A horizontal row of circular icon buttons directly below the top bar, left-to-right:
+1. Settings/mixer icon (opens detailed playback settings)
+2. Speed badge (shows current speed, e.g., "1X" — tap to cycle or open speed picker)
+3. Screenshot/capture icon
+4. Headphones icon (audio output / audio effect shortcut)
+5. Rotate/mirror icon
+6. A trailing `>` chevron — expands into the full quick-tools row (below)
+
+### Player screen — expanded quick-tools row (after tapping the chevron)
+
+A horizontally scrollable row of icon+label pairs, each a circular icon above a text label:
+- Night Mode
+- Customise Items
+- Shuffle
+- Loop
+- Mute
+- Sleep Timer
+- A-B Repeat
+- Mirror Mode
+- Vertical Flip
+- Audio Effect
+- Equalizer
+- Speed
+- Screenshot
+- Background (play) — continues off-screen, scrollable
+
+This expanded row is itself user-customizable — see "Shortcuts" panel below.
+
+### Player screen — subtitle + bottom controls
+
+- Subtitle text renders directly above the seek bar, white text (as generated/loaded), no forced background box in the reference — but see `Accessibility` above: this app should still support an optional semi-transparent backing for readability, exposed as a style setting even if off by default to match the reference look.
+- Seek bar: current time (left), total time (right), draggable scrub handle (accent-colored dot), progress fill in accent color, remainder in muted gray.
+- Bottom control row (left to right): lock icon (locks touch/gestures), previous, play/pause (center, largest), next, expand/fullscreen icon, and a second icon at the far right for screen/display output (cast-style — pairs with the "Screen" bottom-nav tab concept rather than MX Player's own casting feature).
+
+### Player screen — three-dot overflow menu (full-screen grid overlay)
+
+Tapping the top-bar three-dot icon opens a translucent overlay over the video, top-right anchored, as a 4-column icon grid:
+
+Row 1: Playing Queue, Aspect Ratio, Display Settings, Bookmark
+Row 2: Cut, Favourite, Add To Playlist, Information
+Row 3: Share, Network Stream, Tutorial, More
+
+Below the grid, two toggle rows:
+- **Video Display** — toggle (on/off)
+- **Shortcuts** — toggle (on/off); when enabled, tapping it expands into the Shortcuts customization panel (below)
+
+### Shortcuts customization panel
+
+A checklist (two-column) of every quick-tool available for the customizable shortcut row, each with a checkbox to include/exclude it from the player's quick-tools row:
+
+Screen Rotation, Playback Speed, Background Play, Loop, Mute, Shuffle, Equalizer, Audio Effect, Sleep Timer, A-B Repeat, Night Mode, Customise Items, Screenshot, Mirror Mode
+
+All shown checked by default; unchecking an item removes it from the expanded quick-tools row on the player screen, letting users trim the row down to only what they use.
+
+### Implementation note
+
+This section supersedes the general "Layout patterns" description above wherever the two differ in specifics — treat this as the literal build reference, and the earlier sections as the rationale/principles behind it.

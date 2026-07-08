@@ -11,7 +11,10 @@ import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.*
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -21,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -493,6 +497,9 @@ fun PlayerControlsOverlay(
     onAdjustOffset: (Long) -> Unit = {},
     mxBlue: Color = Color.Cyan
 ) {
+    var showExpandedShortcuts by remember { mutableStateOf(false) }
+    var showOverflowGrid by remember { mutableStateOf(false) }
+
     Box(modifier = Modifier.fillMaxSize()) {
         if (!isLocked) {
             // TOP BAR
@@ -532,35 +539,100 @@ fun PlayerControlsOverlay(
                         text = mediaSource.displayName,
                         color = Color.White,
                         style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f)
                     )
                     
+                    IconButton(onClick = { /* Playing Queue */ }) {
+                        Icon(Icons.Default.QueueMusic, contentDescription = "Queue", tint = Color.White)
+                    }
                     IconButton(onClick = onTrackSelectionClick) {
-                        Icon(Icons.Default.SettingsVoice, contentDescription = "Audio Tracks", tint = Color.White)
+                        Icon(Icons.Default.MusicNote, contentDescription = "Audio Tracks", tint = Color.White)
                     }
-
-                    IconButton(onClick = onGenerateSubtitles) {
-                        Icon(Icons.Default.Subtitles, contentDescription = "Subtitles", tint = if (subtitleOffset != 0L) mxBlue else Color.White)
+                    IconButton(onClick = { /* Equalizer */ }) {
+                        Icon(Icons.Default.Tune, contentDescription = "Equalizer", tint = Color.White)
                     }
-
                     TextButton(onClick = onToggleDecoder) {
-                        Text(decoderType, color = Color.White, fontWeight = FontWeight.Bold)
+                        Surface(
+                            color = Color.White.copy(alpha = 0.2f),
+                            shape = MaterialTheme.shapes.extraSmall
+                        ) {
+                            Text(
+                                text = decoderType,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+                    IconButton(onClick = { showOverflowGrid = true }) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "Options", tint = Color.White)
+                    }
+                }
+
+                // Quick-tool icon row
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = { /* Settings/Mixer */ }) {
+                        Icon(Icons.Default.Settings, contentDescription = "Settings", tint = Color.White, modifier = Modifier.size(20.dp))
+                    }
+                    TextButton(onClick = onToggleSpeed) {
+                        Text("${playbackSpeed}X", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                    IconButton(onClick = { /* Screenshot */ }) {
+                        Icon(Icons.Default.Screenshot, contentDescription = "Screenshot", tint = Color.White, modifier = Modifier.size(20.dp))
+                    }
+                    IconButton(onClick = { /* Headphones */ }) {
+                        Icon(Icons.Default.Headphones, contentDescription = "Audio Output", tint = Color.White, modifier = Modifier.size(20.dp))
+                    }
+                    IconButton(onClick = { /* Rotate */ }) {
+                        Icon(Icons.Default.ScreenRotation, contentDescription = "Rotate", tint = Color.White, modifier = Modifier.size(20.dp))
+                    }
+                    IconButton(onClick = { showExpandedShortcuts = !showExpandedShortcuts }) {
+                        Icon(
+                            if (showExpandedShortcuts) Icons.Default.ChevronLeft else Icons.Default.ChevronRight,
+                            contentDescription = "Expand",
+                            tint = Color.White
+                        )
                     }
 
-                    IconButton(onClick = { /* More Menu */ }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "Options", tint = Color.White)
+                    if (showExpandedShortcuts) {
+                        // Expanded quick-tools (horizontal scroll)
+                        Row(
+                            modifier = Modifier.horizontalScroll(rememberScrollState()),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            ShortcutItem(Icons.Default.Subtitles, "Subtitles", 
+                                tint = if (subtitleOffset != 0L) mxBlue else Color.White,
+                                onClick = onGenerateSubtitles
+                            )
+                            ShortcutItem(Icons.Default.Sync, "Sync",
+                                onClick = { /* Show sync controls in center maybe? */ }
+                            )
+                            ShortcutItem(Icons.Default.NightsStay, "Night Mode")
+                            ShortcutItem(Icons.Default.Edit, "Customise")
+                            ShortcutItem(Icons.Default.Shuffle, "Shuffle")
+                            ShortcutItem(Icons.Default.Loop, "Loop")
+                            ShortcutItem(Icons.Default.VolumeMute, "Mute")
+                            ShortcutItem(Icons.Default.Timer, "Sleep Timer", onClick = onSleepTimerClick)
+                            ShortcutItem(Icons.Default.Repeat, "A-B Repeat", onClick = onABRepeatClick)
+                        }
                     }
                 }
             }
 
-            // Sync Controls
+            // Sync Controls (floating near top right)
             if (subtitleOffset != 0L) {
-                 Row(
+                Row(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(top = 100.dp, end = 16.dp)
+                        .padding(top = 160.dp, end = 16.dp)
                         .background(Color.Black.copy(alpha = 0.4f), shape = MaterialTheme.shapes.small)
                         .padding(4.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -615,23 +687,21 @@ fun PlayerControlsOverlay(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Playback Buttons Row (MX PLAYER STYLE)
+                // Playback Buttons Row
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Left: Lock
                     IconButton(onClick = onLockToggle) {
                         Icon(Icons.Default.LockOpen, contentDescription = "Lock", tint = Color.White)
                     }
 
-                    // Center: Controls
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(24.dp)
                     ) {
-                        IconButton(onClick = { /* Previous */ }, modifier = Modifier.size(32.dp)) {
+                        IconButton(onClick = { /* Prev */ }, modifier = Modifier.size(32.dp)) {
                             Icon(Icons.Default.SkipPrevious, contentDescription = "Prev", tint = Color.White)
                         }
                         IconButton(onClick = { onSeek(currentPosition - 10000) }, modifier = Modifier.size(32.dp)) {
@@ -655,19 +725,17 @@ fun PlayerControlsOverlay(
                         }
                     }
 
-                    // Right: Features (Speed / Pip / Resize)
                     Row {
-                        IconButton(onClick = onToggleSpeed) {
-                            Text("${playbackSpeed}x", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        }
                         IconButton(onClick = onToggleResize) {
                             Icon(Icons.Default.AspectRatio, contentDescription = "Resize", tint = Color.White)
+                        }
+                        IconButton(onClick = { /* Screen Output */ }) {
+                            Icon(Icons.Default.Cast, contentDescription = "Cast", tint = Color.White)
                         }
                     }
                 }
             }
         } else {
-            // Locked State Overlay
             IconButton(
                 onClick = onLockToggle,
                 modifier = Modifier
@@ -682,9 +750,92 @@ fun PlayerControlsOverlay(
                 )
             }
         }
+
+        if (showOverflowGrid) {
+            OverflowGridMenu(onDismiss = { showOverflowGrid = false })
+        }
     }
-    
-    // Logic for other dialogs is handled outside this composable in the main PlayerScreen
+}
+
+@Composable
+fun ShortcutItem(icon: ImageVector, label: String, tint: Color = Color.White, onClick: () -> Unit = {}) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.padding(horizontal = 8.dp).clickable { onClick() }
+    ) {
+        Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(20.dp))
+        Text(label, color = Color.White, fontSize = 8.sp)
+    }
+}
+
+@Composable
+fun OverflowGridMenu(onDismiss: () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = Color.Black.copy(alpha = 0.7f)
+    ) {
+        Box(modifier = Modifier.fillMaxSize().clickable { onDismiss() }) {
+            Card(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(16.dp)
+                    .width(280.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.DarkGray)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    val items = listOf(
+                        "Playing Queue" to Icons.Default.QueueMusic,
+                        "Aspect Ratio" to Icons.Default.AspectRatio,
+                        "Display" to Icons.Default.SettingsSystemDaydream,
+                        "Bookmark" to Icons.Default.Bookmark,
+                        "Cut" to Icons.Default.ContentCut,
+                        "Favourite" to Icons.Default.Favorite,
+                        "Playlist" to Icons.Default.PlaylistAdd,
+                        "Info" to Icons.Default.Info,
+                        "Share" to Icons.Default.Share,
+                        "Stream" to Icons.Default.Link,
+                        "Tutorial" to Icons.Default.Help,
+                        "More" to Icons.Default.Settings
+                    )
+                    
+                    androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                        columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(4),
+                        modifier = Modifier.height(240.dp)
+                    ) {
+                        items(items) { item ->
+                            val (label, icon) = item
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.padding(vertical = 8.dp)
+                            ) {
+                                Icon(icon, contentDescription = label, tint = Color.White, modifier = Modifier.size(24.dp))
+                                Text(label, color = Color.White, fontSize = 10.sp, textAlign = TextAlign.Center)
+                            }
+                        }
+                    }
+                    
+                    Divider(color = Color.White.copy(alpha = 0.2f), modifier = Modifier.padding(vertical = 8.dp))
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Video Display", color = Color.White, style = MaterialTheme.typography.bodySmall)
+                        Switch(checked = true, onCheckedChange = {})
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Shortcuts", color = Color.White, style = MaterialTheme.typography.bodySmall)
+                        Switch(checked = true, onCheckedChange = {})
+                    }
+                }
+            }
+        }
+    }
 }
 
 fun formatTime(ms: Long): String {

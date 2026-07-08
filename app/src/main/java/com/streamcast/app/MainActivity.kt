@@ -25,8 +25,12 @@ import androidx.navigation.compose.*
 import androidx.navigation.navArgument
 import com.streamcast.core.player.MediaSource
 import com.streamcast.core.player.SourceType
-import com.streamcast.feature.library.ui.AudioScreen
-import com.streamcast.feature.library.ui.VideoScreen
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.List
+import com.streamcast.feature.library.ui.LocalScreen
+import com.streamcast.feature.library.ui.MusicScreen
+import com.streamcast.feature.library.ui.ScreenScreen
+import com.streamcast.feature.library.ui.MeScreen
 import com.streamcast.feature.library.ui.player.PlayerScreen
 import com.streamcast.ui.theme.StreamCastTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -61,11 +65,6 @@ class MainActivity : ComponentActivity() {
                 val isPlayerScreen = currentRoute.startsWith("player")
 
                 Scaffold(
-                    topBar = {
-                        if (!isPlayerScreen) {
-                            StreamCastTopBar(navController)
-                        }
-                    },
                     bottomBar = {
                         if (!isPlayerScreen) {
                             StreamCastBottomBar(navController)
@@ -74,25 +73,30 @@ class MainActivity : ComponentActivity() {
                 ) { innerPadding ->
                     NavHost(
                         navController = navController,
-                        startDestination = "video",
+                        startDestination = MainScreen.Local.route,
                         modifier = Modifier.padding(innerPadding)
                     ) {
-                        composable("video") {
-                            VideoScreen(
-                                onVideoClick = { video ->
-                                    val encodedUri = Uri.encode(video.uri.toString())
-                                    navController.navigate("player/$encodedUri/${video.displayName}")
+                        composable(MainScreen.Local.route) {
+                            LocalScreen(
+                                onMediaClick = { media ->
+                                    val encodedUri = Uri.encode(media.uri.toString())
+                                    navController.navigate("player/$encodedUri/${media.displayName}")
                                 }
                             )
                         }
-                        composable("audio") {
-                            AudioScreen()
+                        composable(MainScreen.Music.route) {
+                            MusicScreen(
+                                onMediaClick = { media ->
+                                    val encodedUri = Uri.encode(media.uri.toString())
+                                    navController.navigate("player/$encodedUri/${media.displayName}")
+                                }
+                            )
                         }
-                        composable("iptv") { 
-                            Surface(Modifier.fillMaxSize()) { Box(contentAlignment = androidx.compose.ui.Alignment.Center) { Text("IPTV Screen") } }
+                        composable(MainScreen.Screen.route) { 
+                            ScreenScreen()
                         }
-                        composable("profile") { 
-                            Surface(Modifier.fillMaxSize()) { Box(contentAlignment = androidx.compose.ui.Alignment.Center) { Text("Profile Screen") } }
+                        composable(MainScreen.Me.route) { 
+                            MeScreen()
                         }
                         composable(
                             route = "player/{uri}/{name}",
@@ -140,15 +144,15 @@ fun StreamCastTopBar(navController: androidx.navigation.NavHostController) {
 }
 
 sealed class MainScreen(val route: String, val label: String, val icon: ImageVector) {
-    object Video : MainScreen("video", "Video", Icons.Default.Movie)
-    object Audio : MainScreen("audio", "Audio", Icons.Default.MusicNote)
-    object Iptv : MainScreen("iptv", "IPTV", Icons.Default.Tv)
-    object Profile : MainScreen("profile", "Profile", Icons.Default.Person)
+    object Local : MainScreen("local", "Local", Icons.Default.Folder)
+    object Music : MainScreen("music", "Music", Icons.Default.MusicNote)
+    object Screen : MainScreen("screen", "Screen", Icons.Default.Cast)
+    object Me : MainScreen("me", "Me", Icons.Default.Person)
 }
 
 @Composable
 fun StreamCastBottomBar(navController: androidx.navigation.NavHostController) {
-    val items = listOf(MainScreen.Video, MainScreen.Audio, MainScreen.Iptv, MainScreen.Profile)
+    val items = listOf(MainScreen.Local, MainScreen.Music, MainScreen.Screen, MainScreen.Me)
     NavigationBar(
         containerColor = MaterialTheme.colorScheme.surface,
         tonalElevation = 8.dp

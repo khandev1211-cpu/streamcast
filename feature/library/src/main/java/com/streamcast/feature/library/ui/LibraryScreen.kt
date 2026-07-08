@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.streamcast.core.player.MediaSource
@@ -42,83 +43,98 @@ fun LibraryScreen(
     val folderStack by viewModel.folderStack.collectAsState()
     val isHierarchical by viewModel.isHierarchical.collectAsState()
     
-    var isGridView by remember { mutableStateOf(true) }
+    var isGridView by remember { mutableStateOf(false) } // Default to list view as per ref
     val currentFolder = folderStack.lastOrNull()
 
     BackHandler(enabled = folderStack.isNotEmpty()) {
         viewModel.navigateBack()
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        TopAppBar(
-            title = { 
-                Text(
-                    text = currentFolder?.name ?: if (isHierarchical) "Folders" else "All Folders",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            navigationIcon = {
-                if (folderStack.isNotEmpty()) {
-                    IconButton(onClick = { viewModel.navigateBack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { 
+                    Text(
+                        text = currentFolder?.name ?: if (isHierarchical) "Folders" else "Local",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                navigationIcon = {
+                    if (folderStack.isNotEmpty()) {
+                        IconButton(onClick = { viewModel.navigateBack() }) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        }
+                    } else {
+                        IconButton(onClick = { /* Menu */ }) {
+                            Icon(Icons.Default.Menu, contentDescription = "Menu")
+                        }
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { /* Folder Browse */ }) {
+                        Icon(Icons.Default.FolderOpen, contentDescription = "Browse")
+                    }
+                    IconButton(onClick = { /* Search */ }) {
+                        Icon(Icons.Default.Search, contentDescription = "Search")
+                    }
+                    IconButton(onClick = { isGridView = !isGridView }) {
+                        Icon(if (isGridView) Icons.Default.List else Icons.Default.GridView, contentDescription = "Toggle View")
                     }
                 }
-            },
-            actions = {
-                IconButton(onClick = { isGridView = !isGridView }) {
-                    Icon(if (isGridView) Icons.Default.List else Icons.Default.GridView, contentDescription = "Toggle Grid")
-                }
-                IconButton(onClick = { viewModel.toggleViewMode() }) {
-                    Icon(if (isHierarchical) Icons.Default.AccountTree else Icons.Default.FilterNone, contentDescription = "Toggle Hierarchy")
-                }
-                IconButton(onClick = { viewModel.loadMedia() }) {
-                    Icon(Icons.Default.Refresh, contentDescription = "Refresh")
-                }
-            }
-        )
-
-        conversionState?.let { state ->
-            when (state) {
-                is ConversionState.Loading -> LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                is ConversionState.Error -> Text("Error: ${state.message}", color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(8.dp))
-                else -> {}
+            )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { /* Quick Play */ },
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            ) {
+                Icon(Icons.Default.PlayArrow, contentDescription = "Play")
             }
         }
-
-        Box(modifier = Modifier.fillMaxSize()) {
-            when (val state = uiState) {
-                is LibraryUiState.Loading -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+    ) { innerPadding ->
+        Column(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+            conversionState?.let { state ->
+                when (state) {
+                    is ConversionState.Loading -> LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    is ConversionState.Error -> Text("Error: ${state.message}", color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(8.dp))
+                    else -> {}
                 }
-                is LibraryUiState.Success -> {
-                    // In flat mode, if we're in a folder, we don't show other folders.
-                    // In hierarchical mode, we show subfolders returned by the repository.
-                    val foldersToShow = if (!isHierarchical && currentFolder != null) {
-                        emptyList()
-                    } else {
-                        state.folders
-                    }
+            }
 
-                    if (isGridView) {
-                        MediaGridContent(
-                            folders = foldersToShow,
-                            mediaItems = currentFolder?.items ?: emptyList(),
-                            onFolderClick = { viewModel.navigateInto(it) },
-                            onMediaClick = onVideoClick
-                        )
-                    } else {
-                        MediaListContent(
-                            folders = foldersToShow,
-                            mediaItems = currentFolder?.items ?: emptyList(),
-                            onFolderClick = { viewModel.navigateInto(it) },
-                            onMediaClick = onVideoClick,
-                            onConvertClick = { viewModel.convertToAudio(it) }
-                        )
+            Box(modifier = Modifier.fillMaxSize()) {
+                when (val state = uiState) {
+                    is LibraryUiState.Loading -> {
+                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                     }
-                }
-                is LibraryUiState.Error -> {
-                    Text(text = "Error: ${state.message}", color = MaterialTheme.colorScheme.error, modifier = Modifier.align(Alignment.Center))
+                    is LibraryUiState.Success -> {
+                        val foldersToShow = if (!isHierarchical && currentFolder != null) {
+                            emptyList()
+                        } else {
+                            state.folders
+                        }
+
+                        if (isGridView) {
+                            MediaGridContent(
+                                folders = foldersToShow,
+                                mediaItems = currentFolder?.items ?: emptyList(),
+                                onFolderClick = { viewModel.navigateInto(it) },
+                                onMediaClick = onVideoClick
+                            )
+                        } else {
+                            MediaListContent(
+                                folders = foldersToShow,
+                                mediaItems = currentFolder?.items ?: emptyList(),
+                                onFolderClick = { viewModel.navigateInto(it) },
+                                onMediaClick = onVideoClick,
+                                onConvertClick = { viewModel.convertToAudio(it) }
+                            )
+                        }
+                    }
+                    is LibraryUiState.Error -> {
+                        Text(text = "Error: ${state.message}", color = MaterialTheme.colorScheme.error, modifier = Modifier.align(Alignment.Center))
+                    }
                 }
             }
         }
@@ -138,14 +154,22 @@ fun MediaGridContent(
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Show folders first
-        items(folders) { folder ->
-            FolderItemGrid(folder = folder, onClick = { onFolderClick(folder) })
+        if (folders.isNotEmpty()) {
+            item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                Text("Folders", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(bottom = 8.dp))
+            }
+            items(folders) { folder ->
+                FolderItemGrid(folder = folder, onClick = { onFolderClick(folder) })
+            }
         }
         
-        // Then show media items
-        items(mediaItems) { media ->
-            MediaGridItem(media = media, onClick = { onMediaClick(media) })
+        if (mediaItems.isNotEmpty()) {
+            item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                Text("Videos", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp))
+            }
+            items(mediaItems) { media ->
+                MediaGridItem(media = media, onClick = { onMediaClick(media) })
+            }
         }
     }
 }
@@ -158,47 +182,59 @@ fun MediaListContent(
     onMediaClick: (MediaSource) -> Unit,
     onConvertClick: (MediaSource) -> Unit
 ) {
-    LazyColumn {
-        items(folders) { folder ->
-            ListItem(
-                headlineContent = { Text(folder.name, fontWeight = FontWeight.Bold) },
-                supportingContent = { Text("${folder.mediaCount} items") },
-                leadingContent = { Icon(Icons.Default.Folder, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-                modifier = Modifier.clickable { onFolderClick(folder) }
-            )
-            Divider(modifier = Modifier.padding(horizontal = 16.dp))
+    LazyColumn(contentPadding = PaddingValues(bottom = 80.dp)) {
+        if (folders.isNotEmpty()) {
+            item {
+                Text("Folders", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(16.dp))
+            }
+            items(folders) { folder ->
+                ListItem(
+                    headlineContent = { Text(folder.name, fontWeight = FontWeight.Bold) },
+                    supportingContent = { Text("${folder.mediaCount} folders · 0 GB") }, // Placeholder size
+                    leadingContent = { Icon(Icons.Default.Folder, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(40.dp)) },
+                    modifier = Modifier.clickable { onFolderClick(folder) }
+                )
+            }
         }
         
-        items(mediaItems) { media ->
-            val isVideo = media.uri.toString().contains("video")
-            ListItem(
-                headlineContent = { Text(media.displayName, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                supportingContent = { Text(if (isVideo) "Video" else "Audio", style = MaterialTheme.typography.labelSmall) },
-                leadingContent = {
-                    Surface(
-                        modifier = Modifier.size(56.dp, 40.dp),
-                        shape = MaterialTheme.shapes.extraSmall,
-                        color = MaterialTheme.colorScheme.surfaceVariant
-                    ) {
-                        if (isVideo) {
-                            AsyncImage(model = media.uri, contentDescription = null, contentScale = ContentScale.Crop)
-                        } else {
-                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.MusicNote, contentDescription = null)
+        if (mediaItems.isNotEmpty()) {
+            item {
+                Text("Videos", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(16.dp))
+            }
+            items(mediaItems) { media ->
+                val isVideo = true // Assuming videos in this sub-tab
+                ListItem(
+                    headlineContent = { Text(media.displayName, maxLines = 2, overflow = TextOverflow.Ellipsis) },
+                    supportingContent = { Text("5.3 MB · 22 Jun") }, // Placeholder metadata
+                    leadingContent = {
+                        Box(
+                            modifier = Modifier.size(80.dp, 56.dp)
+                        ) {
+                            Surface(
+                                modifier = Modifier.fillMaxSize(),
+                                shape = MaterialTheme.shapes.small,
+                                color = MaterialTheme.colorScheme.surfaceVariant
+                            ) {
+                                AsyncImage(model = media.uri, contentDescription = null, contentScale = ContentScale.Crop)
+                            }
+                            // Duration badge
+                            Surface(
+                                color = Color.Black.copy(alpha = 0.6f),
+                                shape = MaterialTheme.shapes.extraSmall,
+                                modifier = Modifier.align(Alignment.BottomStart).padding(4.dp)
+                            ) {
+                                Text("01:18", color = Color.White, fontSize = 8.sp, modifier = Modifier.padding(horizontal = 2.dp))
                             }
                         }
-                    }
-                },
-                trailingContent = {
-                    if (isVideo) {
-                        IconButton(onClick = { onConvertClick(media) }) {
-                            Icon(Icons.Default.Transform, contentDescription = "Convert", tint = MaterialTheme.colorScheme.primary)
+                    },
+                    trailingContent = {
+                        IconButton(onClick = { /* More Menu */ }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "More")
                         }
-                    }
-                },
-                modifier = Modifier.clickable { onMediaClick(media) }
-            )
-            Divider(modifier = Modifier.padding(start = 88.dp, end = 16.dp))
+                    },
+                    modifier = Modifier.clickable { onMediaClick(media) }
+                )
+            }
         }
     }
 }
