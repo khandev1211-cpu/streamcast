@@ -1,5 +1,7 @@
 package com.streamcast.feature.library.viewmodel
 
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.streamcast.core.database.dao.LocalMediaDao
@@ -51,6 +53,19 @@ class PlayerViewModel @Inject constructor(
 
     private val _isTimeRemainingMode = MutableStateFlow(false)
     val isTimeRemainingMode: StateFlow<Boolean> = _isTimeRemainingMode.asStateFlow()
+
+    // Subtitle Styling
+    private val _subtitleFontSize = MutableStateFlow(18f)
+    val subtitleFontSize = _subtitleFontSize.asStateFlow()
+
+    private val _subtitleColor = MutableStateFlow(0xFFFFFFFF) // White
+    val subtitleColor = _subtitleColor.asStateFlow()
+
+    private val _subtitleBackgroundOpacity = MutableStateFlow(0.6f)
+    val subtitleBackgroundOpacity = _subtitleBackgroundOpacity.asStateFlow()
+
+    private val _currentFolderItems = MutableStateFlow<List<MediaSource>>(emptyList())
+    private var currentMediaIndex = -1
 
     // Subtitle Sync Offset (ms)
     private val _subtitleSyncOffset = MutableStateFlow(0L)
@@ -174,6 +189,31 @@ class PlayerViewModel @Inject constructor(
     fun setVolume(volume: Float) {
         _volume.value = volume
         playerManager.setVolume(volume)
+    }
+
+    fun setSubtitleStyle(size: Float? = null, color: Long? = null, opacity: Float? = null) {
+        size?.let { _subtitleFontSize.value = it }
+        color?.let { _subtitleColor.value = it }
+        opacity?.let { _subtitleBackgroundOpacity.value = it }
+    }
+
+    fun playNext() {
+        if (currentMediaIndex < _currentFolderItems.value.size - 1) {
+            currentMediaIndex++
+            play(_currentFolderItems.value[currentMediaIndex])
+        }
+    }
+
+    fun playPrevious() {
+        if (currentMediaIndex > 0) {
+            currentMediaIndex--
+            play(_currentFolderItems.value[currentMediaIndex])
+        }
+    }
+
+    fun setPlaylist(items: List<MediaSource>, startIndex: Int) {
+        _currentFolderItems.value = items
+        currentMediaIndex = startIndex
     }
 
     fun toggleTimeMode() {

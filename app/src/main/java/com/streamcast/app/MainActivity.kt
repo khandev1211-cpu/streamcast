@@ -25,8 +25,6 @@ import androidx.navigation.compose.*
 import androidx.navigation.navArgument
 import com.streamcast.core.player.MediaSource
 import com.streamcast.core.player.SourceType
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.List
 import com.streamcast.feature.library.ui.LocalScreen
 import com.streamcast.feature.library.ui.MusicScreen
 import com.streamcast.feature.library.ui.ScreenScreen
@@ -78,7 +76,7 @@ class MainActivity : ComponentActivity() {
                     ) {
                         composable(MainScreen.Local.route) {
                             LocalScreen(
-                                onMediaClick = { media ->
+                                onMediaClick = { media: MediaSource ->
                                     val encodedUri = Uri.encode(media.uri.toString())
                                     navController.navigate("player/$encodedUri/${media.displayName}")
                                 }
@@ -86,7 +84,7 @@ class MainActivity : ComponentActivity() {
                         }
                         composable(MainScreen.Music.route) {
                             MusicScreen(
-                                onMediaClick = { media ->
+                                onMediaClick = { media: MediaSource ->
                                     val encodedUri = Uri.encode(media.uri.toString())
                                     navController.navigate("player/$encodedUri/${media.displayName}")
                                 }
@@ -125,22 +123,6 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun StreamCastTopBar(navController: androidx.navigation.NavHostController) {
-    TopAppBar(
-        title = { Text("StreamCast", style = MaterialTheme.typography.titleLarge, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) },
-        actions = {
-            IconButton(onClick = { /* Search */ }) {
-                Icon(Icons.Default.Search, contentDescription = "Search")
-            }
-            IconButton(onClick = { /* More Menu */ }) {
-                Icon(Icons.Default.MoreVert, contentDescription = "More")
-            }
-        }
-    )
 }
 
 sealed class MainScreen(val route: String, val label: String, val icon: ImageVector) {

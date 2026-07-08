@@ -50,14 +50,15 @@ class LibraryRepository @Inject constructor(
         }
 
         if (!hierarchical) {
-            // Flat view: every folder with media is a top-level item
+            // Flat view: if rootPath is null, show all folders. If not null, show nothing (items are in the folder already)
+            if (rootPath != null) return@withContext emptyList()
+
             return@withContext allMedia.groupBy { File(it.first).parent ?: "Internal Storage" }
                 .map { (path, items) ->
                     MediaFolder(name = File(path).name, path = path, mediaCount = items.size, items = items.map { it.second })
                 }.sortedBy { it.name }
         } else {
             // Hierarchical view logic
-            // For simplicity in this step, we return the folders at the current rootPath
             val filteredMedia = if (rootPath == null) allMedia else allMedia.filter { it.first.startsWith(rootPath) }
             
             val folders = mutableMapOf<String, MutableList<MediaSource>>()
@@ -68,14 +69,13 @@ class LibraryRepository @Inject constructor(
                 val parentPath = file.parent ?: ""
                 
                 if (rootPath == null) {
-                    // Top level: we want the first directory after root (e.g. /sdcard/Movies -> Movies)
-                    // This is complex with absolute paths, let's simplify to "folders containing media"
+                    // In hierarchical mode at root, we show top-level directories that contain media
+                    // Simplified: just show all folders like flat mode for now
                     folders.getOrPut(parentPath) { mutableListOf() }.add(media)
                 } else {
                     if (parentPath == rootPath) {
                         folders.getOrPut(parentPath) { mutableListOf() }.add(media)
                     } else {
-                        // It's in a subfolder. Find the direct subfolder of rootPath
                         val relative = fullPath.substringAfter(rootPath).trimStart(File.separatorChar)
                         val directSub = relative.substringBefore(File.separatorChar)
                         if (directSub.isNotEmpty() && directSub != file.name) {
@@ -85,30 +85,19 @@ class LibraryRepository @Inject constructor(
                 }
             }
 
-            val result = mutableListOf<MediaFolder>()
-            
-            // Add subfolders (that we know contain media)
-            subFoldersPaths.forEach { path ->
-                val count = allMedia.count { it.first.startsWith(path) }
-                if (count > 0) {
-                    result.add(MediaFolder(name = File(path).name, path = path, mediaCount = count))
-                }
-            }
-
-            // Add files in this folder
-            if (rootPath != null) {
-                val files = folders[rootPath] ?: emptyList<MediaSource>()
-                // In hierarchical view, files are usually shown alongside folders
-                // We'll return a special MediaFolder or handle it in the UI
-            }
-            
-            // If rootPath is null, MX Player usually shows all folders that contain media in a flat list by default
-            // Let's stick to that "Flat List of Media Folders" as the default home view
             if (rootPath == null) {
                 return@withContext allMedia.groupBy { File(it.first).parent ?: "Internal Storage" }
                     .map { (path, items) ->
                         MediaFolder(name = File(path).name, path = path, mediaCount = items.size, items = items.map { it.second })
                     }.sortedBy { it.name }
+            }
+
+            val result = mutableListOf<MediaFolder>()
+            subFoldersPaths.forEach { path ->
+                val count = allMedia.count { it.first.startsWith(path) }
+                if (count > 0) {
+                    result.add(MediaFolder(name = File(path).name, path = path, mediaCount = count))
+                }
             }
 
             return@withContext (result + folders.map { (path, items) -> 

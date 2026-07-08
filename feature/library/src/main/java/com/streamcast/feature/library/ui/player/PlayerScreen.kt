@@ -69,6 +69,9 @@ fun PlayerScreen(
     val subtitleOffset by viewModel.subtitleSyncOffset.collectAsState()
     val resumePos by viewModel.resumePosition.collectAsState()
     val isTimeRemainingMode by viewModel.isTimeRemainingMode.collectAsState()
+    val subtitleFontSize by viewModel.subtitleFontSize.collectAsState()
+    val subtitleColor by viewModel.subtitleColor.collectAsState()
+    val subtitleBgOpacity by viewModel.subtitleBackgroundOpacity.collectAsState()
     
     var showControls by remember { mutableStateOf(true) }
     var isLocked by remember { mutableStateOf(false) }
@@ -258,6 +261,8 @@ fun PlayerScreen(
                 onABRepeatClick = { showABRepeatControls = !showABRepeatControls },
                 onTrackSelectionClick = { showTrackSelectionDialog = true },
                 onToggleTimeMode = { viewModel.toggleTimeMode() },
+                onPrev = { viewModel.playPrevious() },
+                onNext = { viewModel.playNext() },
                 subtitleOffset = subtitleOffset,
                 onAdjustOffset = { viewModel.adjustSubtitleSyncOffset(it) },
                 mxBlue = mxBlue
@@ -279,6 +284,9 @@ fun PlayerScreen(
             syncOffset = subtitleOffset,
             segments = activeSegments,
             state = subtitleState,
+            fontSize = subtitleFontSize,
+            color = subtitleColor,
+            bgOpacity = subtitleBgOpacity,
             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 140.dp)
         )
     }
@@ -325,6 +333,9 @@ fun SubtitleOverlay(
     syncOffset: Long,
     segments: List<SubtitleSegment>,
     state: SubtitleUiState,
+    fontSize: Float,
+    color: Long,
+    bgOpacity: Float,
     modifier: Modifier = Modifier
 ) {
     val currentSecond = (currentPosition + syncOffset) / 1000f
@@ -339,12 +350,12 @@ fun SubtitleOverlay(
                 activeSegment?.let { segment ->
                     Text(
                         text = segment.text,
-                        color = Color.White,
-                        style = MaterialTheme.typography.bodyLarge,
+                        color = Color(color),
+                        fontSize = fontSize.sp,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center,
                         modifier = Modifier
-                            .background(Color.Black.copy(alpha = 0.6f), shape = MaterialTheme.shapes.small)
+                            .background(Color.Black.copy(alpha = bgOpacity), shape = MaterialTheme.shapes.small)
                             .padding(horizontal = 12.dp, vertical = 4.dp)
                     )
                 }
@@ -493,6 +504,8 @@ fun PlayerControlsOverlay(
     onABRepeatClick: () -> Unit,
     onTrackSelectionClick: () -> Unit,
     onToggleTimeMode: () -> Unit,
+    onPrev: () -> Unit,
+    onNext: () -> Unit,
     subtitleOffset: Long = 0,
     onAdjustOffset: (Long) -> Unit = {},
     mxBlue: Color = Color.Cyan
@@ -613,7 +626,7 @@ fun PlayerControlsOverlay(
                                 onClick = onGenerateSubtitles
                             )
                             ShortcutItem(Icons.Default.Sync, "Sync",
-                                onClick = { /* Show sync controls in center maybe? */ }
+                                onClick = { onAdjustOffset(0) } // Just a way to show sync maybe
                             )
                             ShortcutItem(Icons.Default.NightsStay, "Night Mode")
                             ShortcutItem(Icons.Default.Edit, "Customise")
@@ -627,9 +640,9 @@ fun PlayerControlsOverlay(
                 }
             }
 
-            // Sync Controls (floating near top right)
+            // Sync Controls
             if (subtitleOffset != 0L) {
-                Row(
+                 Row(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(top = 160.dp, end = 16.dp)
@@ -701,7 +714,7 @@ fun PlayerControlsOverlay(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(24.dp)
                     ) {
-                        IconButton(onClick = { /* Prev */ }, modifier = Modifier.size(32.dp)) {
+                        IconButton(onClick = onPrev, modifier = Modifier.size(32.dp)) {
                             Icon(Icons.Default.SkipPrevious, contentDescription = "Prev", tint = Color.White)
                         }
                         IconButton(onClick = { onSeek(currentPosition - 10000) }, modifier = Modifier.size(32.dp)) {
@@ -720,7 +733,7 @@ fun PlayerControlsOverlay(
                         IconButton(onClick = { onSeek(currentPosition + 10000) }, modifier = Modifier.size(32.dp)) {
                             Icon(Icons.Default.Forward10, contentDescription = "+10s", tint = Color.White)
                         }
-                        IconButton(onClick = { /* Next */ }, modifier = Modifier.size(32.dp)) {
+                        IconButton(onClick = onNext, modifier = Modifier.size(32.dp)) {
                             Icon(Icons.Default.SkipNext, contentDescription = "Next", tint = Color.White)
                         }
                     }
