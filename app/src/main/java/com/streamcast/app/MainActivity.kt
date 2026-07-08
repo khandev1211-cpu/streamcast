@@ -27,7 +27,7 @@ import com.streamcast.core.player.MediaSource
 import com.streamcast.core.player.SourceType
 import com.streamcast.feature.library.ui.LocalScreen
 import com.streamcast.feature.library.ui.MusicScreen
-import com.streamcast.feature.library.ui.IptvScreen
+import com.streamcast.feature.iptv.ui.IptvScreen
 import com.streamcast.feature.library.ui.MeScreen
 import com.streamcast.feature.library.ui.player.PlayerScreen
 import com.streamcast.ui.theme.StreamCastTheme

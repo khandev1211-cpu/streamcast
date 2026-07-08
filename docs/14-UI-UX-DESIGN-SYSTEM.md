@@ -8,7 +8,7 @@ Dark-first, modern, minimal-chrome-during-playback. The player itself should fee
 
 ### What "MX Player style" means concretely here
 
-- **Bottom navigation bar only** — primary navigation (Local / Music / IPTV / Me) sits at the bottom of the home screen, ensuring the top remains clean and minimalist.
+- **Top tabs, not just bottom nav** — primary navigation (Library / IPTV / Live) sits as tabs at the top of the home screen, MX-Player-style, rather than relying only on bottom nav. Settings lives behind an overflow/menu icon rather than taking up a full tab slot.
 - **Grid-first local library, grouped by folder** — local videos display as a thumbnail grid, grouped by device folder first (mirroring how MX Player surfaces "Video" by folder before flattening to one list). A grid/list toggle remains available.
 - **Gesture-driven player screen** — swipe vertically on the left half of the screen for brightness, right half for volume; double-tap left/right to seek ±10s; pinch or double-tap-and-hold to resize/zoom video. These gestures work without any visible control, which is core to why MX Player's player screen feels fast.
 - **Minimal always-visible controls, everything else tucked into a corner menu** — the visible overlay is just a seek bar, play/pause, and prev/next. Subtitle language, audio track, playback speed, and subtitle styling live behind a single "more options" icon (top-right corner, MX-Player-style) rather than spread across the main overlay.
@@ -86,7 +86,7 @@ The following locks down precise layout details captured directly from MX Player
 **Bottom navigation bar (4 tabs):**
 - **Local** (folder icon) — local library, current screen
 - **Music** (music-note icon) — audio-only library view
-- **IPTV** (tv icon) — IPTV and Live stream destination
+- **Screen** (replaces MX Player's "Transfer" tab) — this app's dedicated screen for casting/screen-related functionality rather than MX Player's Wi-Fi file-transfer feature; icon should visually imply "screen/display" (e.g., a monitor or cast-style icon) rather than the transfer arrows MX Player uses
 - **Me** (profile icon) — settings/profile entry point
 
 ### Player screen — top bar
@@ -150,6 +150,22 @@ A checklist (two-column) of every quick-tool available for the customizable shor
 Screen Rotation, Playback Speed, Background Play, Loop, Mute, Shuffle, Equalizer, Audio Effect, Sleep Timer, A-B Repeat, Night Mode, Customise Items, Screenshot, Mirror Mode
 
 All shown checked by default; unchecking an item removes it from the expanded quick-tools row on the player screen, letting users trim the row down to only what they use.
+
+### Player screen — landscape orientation
+
+The player screen must have a distinct landscape layout, not just a stretched portrait one — this is the orientation most video is actually watched in, so it needs its own explicit spec rather than being an afterthought.
+
+- **Full-bleed video** — video fills the entire screen width and height (edge-to-edge, accounting for any device notch/cutout); no letterboxing beyond what the video's own aspect ratio requires.
+- **Gesture zones extend full height** — the left-half/right-half swipe zones for brightness/volume (see gesture spec above) span the full screen height in landscape, not just a portion of it, since there's no bottom nav or other chrome competing for space.
+- **Top bar** — same content as portrait (back arrow, title, playing-queue/music/equalizer icons, HW+ badge, three-dot overflow), stretched across the full width; title truncates to a single line in landscape rather than two, given the extra horizontal space.
+- **Quick-tool row** — same icon set as portrait, positioned directly below the top bar, spread with slightly more spacing given the extra width; the expanded quick-tools row (Night Mode → Screenshot) scrolls horizontally the same way it does in portrait.
+- **Lock icon** — repositioned to vertically centered on the left edge in landscape (rather than bottom-left as in portrait), since the bottom control row in landscape is more spread out and the lock icon benefits from being reachable independent of it.
+- **Subtitle line** — centered horizontally with wider side margins than portrait (roughly matching the width of the bottom control row below it), sized slightly larger given the bigger canvas, still positioned just above the seek bar.
+- **Seek bar and bottom controls** — same left-to-right order as portrait (lock, prev, play/pause, next, fullscreen/expand, screen-output icon), but spread across the full width with larger gaps between groups rather than the tightly-packed portrait arrangement.
+- **No bottom nav, no folder/library chrome visible** — landscape playback is full-screen-only; rotating back to portrait (or pressing back) returns to whichever screen launched playback (Local/Music/etc.), consistent with the portrait `PlayerScreen` behavior described in `15-NAVIGATION-SCREENS.md`.
+- **Auto-hide behavior unchanged** — controls fade in/out on tap exactly as in portrait; landscape doesn't change the timing or trigger, only the layout of what's shown.
+
+An interactive landscape mockup of this layout exists alongside the portrait mockups (see the project's HTML prototype) — treat it as the literal reference the same way the portrait screenshots above are treated.
 
 ### Implementation note
 
