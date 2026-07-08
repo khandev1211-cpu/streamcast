@@ -29,21 +29,21 @@ Layered, modular Android app following a standard **MVVM + Repository** pattern,
 app/
 ├── core/
 │   ├── player/          # ExoPlayer wrapper, playback state, media session
-│   ├── network/         # Retrofit/OkHttp clients: VPS API, IPTV/EPG fetchers
+│   ├── network/         # Retrofit/OkHttp clients: backend API, IPTV/EPG fetchers
 │   └── database/        # Room DB: entities, DAOs, migrations
 ├── feature/
-│   ├── library/         # Local file browsing & playback UI
-│   ├── iptv/            # M3U/Xtream parsing, channel list, EPG
-│   ├── live/             # User-added live stream URL management
+│   ├── video/           # Local video browsing & playback UI
+│   ├── audio/           # Local audio browsing & playback UI
+│   ├── iptv/            # IPTV (M3U/Xtream) and Live URL management
 │   └── subtitles/        # Subtitle generation flow, rendering, styling
 ├── ui/
 │   └── theme/            # Compose theme, design tokens, shared components
-└── settings/              # Preferences, VPS endpoint config, subtitle defaults
+└── profile/             # Profile, settings, backend endpoint config
 ```
 
 ## Why this structure
 
-- **Feature modules map to the three content types plus subtitles** — this mirrors the product's own mental model and keeps each subsystem's complexity contained (IPTV parsing quirks don't leak into local playback code, etc).
+- **Feature modules map to the bottom-navigation destinations** — this mirrors the app's primary navigation and keeps each subsystem's complexity contained (Audio-specific metadata doesn't leak into Video logic, etc).
 - **`core/player` is the single source of truth for playback** — every feature module calls into it rather than instantiating its own player instance, so playback state (position, buffering, errors) is consistent regardless of source.
 - **Repositories abstract data origin from the UI** — a `MediaRepository` might pull from Room (local library) or a network call (IPTV channel metadata); the ViewModel doesn't need to know which.
 
@@ -76,10 +76,10 @@ SubtitleViewModel invokes GenerateSubtitlesUseCase
 Audio extracted/captured (full track for LOCAL, rolling buffer for IPTV/LIVE)
         │
         ▼
-SubtitleRepository sends chunk + target language to VPS via Retrofit client
+SubtitleRepository sends chunk + target language to backend via Retrofit client
         │
         ▼
-VPS (Whisper Large + translation step) returns timed text segments
+Backend (Whisper Large + translation step) returns timed text segments
         │
         ▼
 Segments converted to renderable subtitle cues
@@ -93,8 +93,8 @@ Player overlays cues synced to playback position
 
 ## Cross-cutting concerns
 
-- **Error handling**: every network call (VPS, IPTV fetch, EPG fetch) goes through a shared result-wrapper pattern (see `17-ERROR-HANDLING-LOGGING.md`) so failures surface consistently in the UI.
+- **Error handling**: every network call (backend, IPTV fetch, EPG fetch) goes through a shared result-wrapper pattern (see `17-ERROR-HANDLING-LOGGING.md`) so failures surface consistently in the UI.
 - **Threading**: Kotlin Coroutines + Flow throughout; playback state and subtitle segments are exposed as `StateFlow`/`Flow` to the UI layer.
-- **Configuration**: the VPS endpoint is not hardcoded — it lives in a settings-backed config so it can be changed without a rebuild.
+- **Configuration**: the backend endpoint is not hardcoded — it lives in a settings-backed config so it can be changed without a rebuild.
 
 See `05-PROJECT-STRUCTURE.md` for the actual file/package layout, and `16-STATE-MANAGEMENT.md` for how state flows through the UI layer in detail.

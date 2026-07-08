@@ -20,7 +20,7 @@
 
 **faster-whisper** — A reimplementation of Whisper inference using CTranslate2, offering significantly faster inference than the original `openai-whisper` package on the same hardware, for the same model weights.
 
-**Transcription vs. Translation (Whisper-specific)** — Whisper's `transcribe` task outputs text in the spoken (source) language; its `translate` task outputs English only, regardless of source language — a key limitation driving this project's separate translation step for other target languages.
+**Transcription vs. Translation (Whisper-specific)** — Whisper's `transcribe` task outputs text in the spoken (source) language; its `translate` task outputs English only, regardless of source language — a key limitation driving the separate translation step for other target languages.
 
 **MediaSource (this project's internal model)** — The unifying data model representing any playable content (local file, IPTV channel, or user-added live URL) with a common shape (`uri`, `type`, `isCacheable`, optional metadata) so the player, UI, and subtitle systems don't need source-specific branching wherever avoidable.
 
@@ -28,7 +28,7 @@
 
 **Rolling / one-shot subtitle modes** — This project's terminology for the two subtitle generation flows: one-shot (a full local file sent once) versus rolling (a continuously-updating buffer sent in chunks for IPTV/live content).
 
-**VPS (Virtual Private Server)** — A rented virtual server (as opposed to a big managed cloud AI service) where the Whisper-based subtitle inference API is self-hosted for this project.
+**Subtitle Backend** — The server (often a personal VPS) where the Whisper-based subtitle inference API is hosted for this project.
 
 **Kotlin Multiplatform (KMP)** — A Kotlin feature allowing shared business logic across platforms (e.g., Android and desktop/JVM); explicitly not adopted in this project's current plan, since Windows is a separate future build (see `23-WINDOWS-FUTURE-PLAN.md`).
 

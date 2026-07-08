@@ -29,22 +29,22 @@ streamcast-android/
 │           └── dao/
 │
 ├── feature/
-│   ├── library/
-│   │   └── src/main/java/com/streamcast/feature/library/
+│   ├── video/
+│   │   └── src/main/java/com/streamcast/feature/video/
 │   │       ├── ui/                # Compose screens
 │   │       ├── viewmodel/
-│   │       └── LibraryRepository.kt
+│   │       └── VideoRepository.kt
+│   ├── audio/
+│   │   └── src/main/java/com/streamcast/feature/audio/
+│   │       ├── ui/
+│   │       ├── viewmodel/
+│   │       └── AudioRepository.kt
 │   ├── iptv/
 │   │   └── src/main/java/com/streamcast/feature/iptv/
 │   │       ├── ui/
 │   │       ├── viewmodel/
 │   │       ├── parser/            # M3U/Xtream/EPG parsing
 │   │       └── IptvRepository.kt
-│   ├── live/
-│   │   └── src/main/java/com/streamcast/feature/live/
-│   │       ├── ui/
-│   │       ├── viewmodel/
-│   │       └── LiveStreamRepository.kt
 │   └── subtitles/
 │       └── src/main/java/com/streamcast/feature/subtitles/
 │           ├── ui/
@@ -59,10 +59,10 @@ streamcast-android/
 │           ├── Typography.kt
 │           └── Theme.kt
 │
-├── settings/
-│   └── src/main/java/com/streamcast/settings/
-│       ├── ui/
-│       └── SettingsRepository.kt
+├── profile/
+│   └── src/main/java/com/streamcast/profile/
+│       ├── ui/                # Settings & Profile screens
+│       └── ProfileRepository.kt
 │
 ├── build.gradle.kts               # Root build file
 ├── settings.gradle.kts            # Module registration

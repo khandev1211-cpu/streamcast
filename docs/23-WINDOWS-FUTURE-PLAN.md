@@ -8,13 +8,13 @@ High-level thinking for the eventual Windows version, to be built as a **separat
 
 - Avoids taking on Kotlin Multiplatform (or a cross-platform framework) complexity before the Android app itself is proven out and stable.
 - Lets the Windows app be built with whatever's the best-fit native stack at that future time, rather than constraining today's Android architecture decisions around hypothetical cross-platform reuse.
-- The one genuinely shared piece across both platforms is the **VPS subtitle API** — since it's a platform-agnostic HTTP service, both the Android app and a future Windows app can call the same backend without any client-side code sharing at all.
+- The one genuinely shared piece across both platforms is the **subtitle backend API** — since it's a platform-agnostic HTTP service, both the Android app and a future Windows app can call the same backend without any client-side code sharing at all.
 
 ## What can realistically carry over conceptually (not as code)
 
 - The **feature scope** (local playback, IPTV, live streams, AI subtitles) — same product, same core value proposition.
 - The **`MediaSource`/`Channel` conceptual model** — even in an entirely different codebase, keeping this same mental model (a unified source abstraction, subtitle generation as an on-demand action) keeps the two apps consistent in behavior and easier for one developer to reason about across both.
-- The **VPS API contract** (`13-NETWORKING-API-CONTRACTS.md`) — this doesn't change based on client platform, so Windows development can reuse the exact same `/transcribe` and `/health` contract, potentially even reusing recorded API test cases from Android development.
+- The **backend API contract** (`13-NETWORKING-API-CONTRACTS.md`) — this doesn't change based on client platform, so Windows development can reuse the exact same `/transcribe` and `/health` contract, potentially even reusing recorded API test cases from Android development.
 
 ## Candidate Windows tech stacks (to evaluate when that phase actually starts)
 
@@ -28,9 +28,9 @@ No decision is made here — this is intentionally left open until Windows devel
 
 ## Things to plan for, even during Android development, to make Windows easier later
 
-- Keep the VPS API contract clean and documented (already covered in `13-NETWORKING-API-CONTRACTS.md`) so it's trivial to integrate a second, independent client against it.
+- Keep the backend API contract clean and documented (already covered in `13-NETWORKING-API-CONTRACTS.md`) so it's trivial to integrate a second, independent client against it.
 - Keep IPTV parsing logic (M3U/Xtream/EPG format knowledge) documented as *domain knowledge* (see `07-IPTV-INTEGRATION.md`) even though the Android implementation itself won't be reused — the format knowledge and edge cases discovered during Android development are valuable reference material for a Windows parser built independently later.
-- Avoid baking Android-specific assumptions into the VPS backend itself — e.g., don't design the `/transcribe` request format around anything Android-specific; keep it a generic HTTP/JSON contract any client can call.
+- Avoid baking client-specific assumptions into the backend itself — e.g., don't design the `/transcribe` request format around anything Android-specific; keep it a generic HTTP/JSON contract any client can call.
 
 ## Explicitly not a goal right now
 

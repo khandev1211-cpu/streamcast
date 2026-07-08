@@ -8,8 +8,9 @@ Dark-first, modern, minimal-chrome-during-playback. The player itself should fee
 
 ### What "MX Player style" means concretely here
 
-- **Bottom Navigation for primary sections** — primary navigation (Library / IPTV / Live / Settings) sits at the bottom of the home screen for easy thumb reach, while retaining MX Player's clean aesthetic and functional player gestures.
-- **Grid-first local library, grouped by folder** — local videos display as a thumbnail grid, grouped by device folder first (mirroring how MX Player surfaces "Video" by folder before flattening to one list). A grid/list toggle remains available.
+- **Bottom navigation bar** — primary navigation (Video / Audio / IPTV / Profile) sits at the bottom of the screen for easy thumb access, while keeping the player screen full-screen and immersive.
+- **Library split by media type** — local media is split into dedicated "Video" and "Audio" sections in the bottom nav, making it easier for users to jump directly to what they want to play.
+- **Profile/Settings integrated** — a dedicated "Profile" or "Settings" tab in the bottom nav for quick access to backend configuration and app preferences.
 - **Gesture-driven player screen** — swipe vertically on the left half of the screen for brightness, right half for volume; double-tap left/right to seek ±10s; pinch or double-tap-and-hold to resize/zoom video. These gestures work without any visible control, which is core to why MX Player's player screen feels fast.
 - **Minimal always-visible controls, everything else tucked into a corner menu** — the visible overlay is just a seek bar, play/pause, and prev/next. Subtitle language, audio track, playback speed, and subtitle styling live behind a single "more options" icon (top-right corner, MX-Player-style) rather than spread across the main overlay.
 - **Floating/pop-up window mode** — a resizable, draggable floating player window that persists over other apps, MX Player's signature feature. Treated as a Phase 4 polish item (see `22-ROADMAP.md`) since it requires overlay-window handling, but the player architecture (`06-PLAYBACK-ENGINE.md`) shouldn't preclude it later.
@@ -19,7 +20,7 @@ Dark-first, modern, minimal-chrome-during-playback. The player itself should fee
 - **Base**: near-black background (not pure `#000000` — a very dark neutral, e.g., `#0E0E12`, reduces harsh contrast and OLED smearing artifacts while still feeling "dark mode").
 - **Surface elevation**: slightly lighter dark tones for cards/sheets (channel lists, settings panels) to create depth without relying on shadows, which read poorly on dark backgrounds.
 - **Accent color**: a single vibrant accent (e.g., a saturated blue or purple) used sparingly — for the play button, active nav item, and the "Generate Subtitles" call-to-action specifically, since that's the differentiating feature and deserves visual emphasis.
-- **Semantic colors**: distinct, consistent colors for error states (stream failed, VPS unreachable) vs. informational states (buffering, syncing) — don't reuse the accent color for both success and error contexts.
+- **Semantic colors**: distinct, consistent colors for error states (stream failed, backend unreachable) vs. informational states (buffering, syncing) — don't reuse the accent color for both success and error contexts.
 
 ## Typography
 
@@ -28,8 +29,8 @@ Dark-first, modern, minimal-chrome-during-playback. The player itself should fee
 
 ## Layout patterns
 
-- **Bottom tab bar** (Library / IPTV / Live / Settings) as the primary navigation for modern accessibility and ease of use.
-- **Grid-first, folder-grouped local library** — thumbnails in a grid, grouped by folder by default; a toggle switches to a flat compact list for users who prefer scanning by filename.
+- **Bottom navigation bar** (Video / Audio / IPTV / Profile) as the primary navigation, ensuring the most common destinations are always one tap away.
+- **Grid-first, folder-grouped libraries** — thumbnails in a grid for Video and list/grid for Audio, grouped by folder by default; a toggle switches to a flat compact list for users who prefer scanning by filename.
 - **Channel lists (IPTV/Live)** default to a list view (denser, more scannable for potentially hundreds of channels) with channel logos as small leading icons, category headers, and a grid toggle available for users who prefer browsing by logo.
 - **Full-screen player** with auto-hiding controls and MX-Player-style gesture zones (see above) — tap to reveal controls, auto-hide after a few seconds of inactivity.
 - **Corner "more options" menu** on the player screen — a single icon opening a sheet/panel with subtitle language, subtitle styling, audio track, playback speed, and (for IPTV) EPG details, keeping the main overlay uncluttered.
@@ -40,7 +41,7 @@ Dark-first, modern, minimal-chrome-during-playback. The player itself should fee
 - **Language picker**: a searchable bottom sheet or dropdown, not a long unfiltered list, given the number of languages Whisper supports.
 - **Loading state**: a subtle progress indicator near the subtitle area itself (not a full-screen blocking spinner) so users can keep watching while subtitles generate.
 - **Subtitle styling controls**: size, color, background opacity — exposed in Settings and/or a quick-access overlay during playback, since readability varies a lot by content and personal preference.
-- **Error state**: a small, dismissible inline message ("Couldn't reach subtitle server — check your connection or VPS status") rather than an intrusive dialog that interrupts playback.
+- **Error state**: a small, dismissible inline message ("Couldn't reach subtitle server — check your connection or backend status") rather than an intrusive dialog that interrupts playback.
 
 ## Motion
 

@@ -4,7 +4,7 @@
 
 The app talks to three kinds of external endpoints:
 
-1. **The self-hosted VPS** — Whisper subtitle generation (`/transcribe`, `/health`).
+1. **The developer's VPS** — Whisper subtitle generation (`/transcribe`, `/health`).
 2. **IPTV sources** — M3U playlist URLs (plain text fetch) and Xtream Codes APIs (JSON REST).
 3. **EPG sources** — XMLTV data, either bundled with the Xtream API or a separate URL.
 

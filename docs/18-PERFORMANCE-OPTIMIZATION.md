@@ -17,8 +17,8 @@ Given the feature set, performance work should focus on: playback smoothness acr
 
 ## Subtitle generation performance
 
-- **Latency is dominated by VPS inference time**, not client-side work — the biggest lever here is on the VPS side (see `10-VPS-WHISPER-SETUP.md`: model choice, GPU vs CPU, `faster-whisper` vs standard `openai-whisper`).
-- Client-side, keep audio chunk sizes for live/rolling mode reasonable (not so small that per-request overhead dominates, not so large that latency balloons) — this needs empirical tuning against actual VPS response times once the backend is running.
+- **Latency is dominated by backend inference time**, not client-side work — the biggest lever here is on the backend side (see `10-VPS-WHISPER-SETUP.md`: model choice, GPU vs CPU, `faster-whisper` vs standard `openai-whisper`).
+- Client-side, keep audio chunk sizes for live/rolling mode reasonable (not so small that per-request overhead dominates, not so large that latency balloons) — this needs empirical tuning against actual backend response times once the backend is running.
 - Avoid holding decoded audio buffers longer than necessary — for rolling-mode capture, discard old buffer data once it's been sent, rather than accumulating an ever-growing in-memory buffer.
 
 ## Battery & data usage
@@ -40,4 +40,4 @@ Given the feature set, performance work should focus on: playback smoothness acr
 
 ## Benchmarking recommendation
 
-- Before committing to specific buffer sizes, chunk intervals, or model choices (Whisper Large vs faster-whisper vs a smaller model for live mode), do empirical testing against the actual VPS hardware rather than guessing — these numbers vary enormously based on real infrastructure, and decisions made on assumption here are likely to need revisiting anyway.
+- Before committing to specific buffer sizes, chunk intervals, or model choices (Whisper Large vs faster-whisper vs a smaller model for live mode), do empirical testing against the actual hardware rather than guessing — these numbers vary enormously based on real infrastructure, and decisions made on assumption here are likely to need revisiting anyway.

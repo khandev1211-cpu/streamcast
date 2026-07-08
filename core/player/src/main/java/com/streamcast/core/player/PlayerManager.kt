@@ -10,12 +10,19 @@ interface PlayerManager {
     val playbackState: StateFlow<PlaybackState>
     val playerState: StateFlow<Player?>
     
+    // A-B Repeat State
+    val abRepeatRange: StateFlow<Pair<Long, Long>?>
+
     fun play(source: MediaSource)
     fun pause()
     fun resume()
     fun seekTo(positionMs: Long)
     fun stop()
     fun release()
+    
+    // A-B Repeat Controls
+    fun setAbRepeatRange(startMs: Long, endMs: Long)
+    fun clearAbRepeatRange()
 }
 
 /**

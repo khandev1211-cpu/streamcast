@@ -1,11 +1,9 @@
 package com.streamcast.feature.library.ui.player
 
 import android.app.Activity
-import android.content.BroadcastReceiver
-import android.content.Context
+import android.os.BatteryManager
 import android.content.Intent
 import android.content.IntentFilter
-import android.os.BatteryManager
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.annotation.OptIn
@@ -26,6 +24,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -57,28 +56,33 @@ fun PlayerScreen(
     val duration by viewModel.duration.collectAsState()
     val playbackSpeed by viewModel.playbackSpeed.collectAsState()
     val decoderType by viewModel.decoderType.collectAsState()
+    val abRange by viewModel.abRepeatRange.collectAsState()
+    val sleepTimer by viewModel.sleepTimerMillis.collectAsState()
+    val subtitleState by viewModel.subtitleUiState.collectAsState()
+    val activeSegments by viewModel.activeSubtitleSegments.collectAsState()
     
     var showControls by remember { mutableStateOf(true) }
     var isLocked by remember { mutableStateOf(false) }
     var resizeMode by remember { mutableStateOf(AspectRatioFrameLayout.RESIZE_MODE_FIT) }
     var scale by remember { mutableStateOf(1f) }
 
-    // System info states
     var currentTime by remember { mutableStateOf("") }
     var batteryLevel by remember { mutableStateOf(0) }
 
-    // Gesture status
     var gestureType by remember { mutableStateOf("") } 
     var gestureProgress by remember { mutableStateOf(0f) }
     var seekTarget by remember { mutableStateOf(0L) }
 
-    // Update time and battery
+    var showSleepTimerDialog by remember { mutableStateOf(false) }
+    var showABRepeatControls by remember { mutableStateOf(false) }
+    var showTrackSelectionDialog by remember { mutableStateOf(false) }
+
     LaunchedEffect(Unit) {
         while (true) {
             currentTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
             val batteryStatus: Intent? = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
             batteryLevel = batteryStatus?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: 0
-            delay(10000) // Update every 10s
+            delay(10000)
         }
     }
 
@@ -173,10 +177,9 @@ fun PlayerScreen(
                 )
         )
 
-        // Gesture Overlay
         if (gestureType.isNotEmpty()) {
             if (gestureType == "Seek") {
-                SeekIndicator(seekTarget, duration)
+                SeekIndicator(seekTarget)
             } else {
                 GestureIndicator(type = gestureType, progress = gestureProgress)
             }
@@ -197,6 +200,8 @@ fun PlayerScreen(
                 currentTime = currentTime,
                 batteryLevel = batteryLevel,
                 isLocked = isLocked,
+                abRange = abRange,
+                sleepTimerRemaining = sleepTimer,
                 onBack = onBack,
                 onPlayPause = {
                     if (playbackState is PlaybackState.Playing) viewModel.pause()
@@ -204,7 +209,7 @@ fun PlayerScreen(
                 },
                 onLockToggle = { isLocked = !isLocked },
                 onSeek = { viewModel.seekTo(it) },
-                onGenerateSubtitles = { /* AI */ },
+                onGenerateSubtitles = { viewModel.generateSubtitles("en") },
                 onToggleSpeed = { viewModel.togglePlaybackSpeed() },
                 onToggleDecoder = { viewModel.toggleDecoder() },
                 onToggleResize = {
@@ -215,17 +220,138 @@ fun PlayerScreen(
                     }
                     if (resizeMode == AspectRatioFrameLayout.RESIZE_MODE_FIT) scale = 1f
                 },
-                onPiP = { activity?.enterPictureInPictureMode() }
+                onPiP = { activity?.enterPictureInPictureMode() },
+                onSleepTimerClick = { showSleepTimerDialog = true },
+                onABRepeatClick = { showABRepeatControls = !showABRepeatControls },
+                onTrackSelectionClick = { showTrackSelectionDialog = true }
             )
+        }
+
+        if (showABRepeatControls && !isLocked) {
+            ABRepeatControls(
+                abRange = abRange,
+                onSetA = { viewModel.setAbRepeat(currentPos, abRange?.second ?: (currentPos + 5000)) },
+                onSetB = { viewModel.setAbRepeat(abRange?.first ?: 0L, currentPos) },
+                onClear = { viewModel.clearAbRepeat() },
+                modifier = Modifier.align(Alignment.CenterEnd).padding(16.dp)
+            )
+        }
+
+        SubtitleOverlay(
+            currentPosition = currentPos,
+            segments = activeSegments,
+            state = subtitleState,
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 80.dp)
+        )
+    }
+
+    if (showSleepTimerDialog) {
+        SleepTimerDialog(
+            onDismiss = { showSleepTimerDialog = false },
+            onSelect = { 
+                viewModel.setSleepTimer(it)
+                showSleepTimerDialog = false
+            }
+        )
+    }
+
+    if (showTrackSelectionDialog) {
+        TrackSelectionDialog(
+            player = player,
+            onDismiss = { showTrackSelectionDialog = false }
+        )
+    }
+}
+
+@Composable
+fun SubtitleOverlay(
+    currentPosition: Long,
+    segments: List<com.streamcast.core.player.model.SubtitleSegment>,
+    state: com.streamcast.feature.library.viewmodel.SubtitleUiState,
+    modifier: Modifier = Modifier
+) {
+    val currentSecond = currentPosition / 1000f
+    val activeSegment = segments.find { currentSecond >= it.start && currentSecond <= it.end }
+
+    Box(modifier = modifier.fillMaxWidth().padding(horizontal = 32.dp), contentAlignment = Alignment.Center) {
+        when (state) {
+            is com.streamcast.feature.library.viewmodel.SubtitleUiState.Loading -> {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+            }
+            is com.streamcast.feature.library.viewmodel.SubtitleUiState.Active -> {
+                activeSegment?.let { segment ->
+                    Text(
+                        text = segment.text,
+                        color = Color.White,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .background(Color.Black.copy(alpha = 0.6f), shape = MaterialTheme.shapes.small)
+                            .padding(horizontal = 12.dp, vertical = 4.dp)
+                    )
+                }
+            }
+            is com.streamcast.feature.library.viewmodel.SubtitleUiState.Error -> {
+                Text(state.message, color = Color.Red, style = MaterialTheme.typography.labelSmall)
+            }
+            else -> {}
         }
     }
 }
 
 @Composable
-fun SeekIndicator(target: Long, total: Long) {
+fun ABRepeatControls(
+    abRange: Pair<Long, Long>?,
+    onSetA: () -> Unit,
+    onSetB: () -> Unit,
+    onClear: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .background(Color.Black.copy(alpha = 0.6f), shape = MaterialTheme.shapes.medium)
+            .padding(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text("A-B Loop", color = Color.White, style = MaterialTheme.typography.labelSmall)
+        Button(onClick = onSetA, colors = ButtonDefaults.buttonColors(containerColor = if (abRange?.first != null) MaterialTheme.colorScheme.primary else Color.Gray)) {
+            Text("Set A")
+        }
+        Button(onClick = onSetB, colors = ButtonDefaults.buttonColors(containerColor = if (abRange?.second != null) MaterialTheme.colorScheme.primary else Color.Gray)) {
+            Text("Set B")
+        }
+        TextButton(onClick = onClear) {
+            Text("Clear", color = Color.White)
+        }
+    }
+}
+
+@Composable
+fun SleepTimerDialog(onDismiss: () -> Unit, onSelect: (Int) -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Sleep Timer") },
+        text = {
+            Column {
+                listOf(0, 15, 30, 60, 90).forEach { mins ->
+                    val label = if (mins == 0) "Off" else "$mins minutes"
+                    ListItem(
+                        headlineContent = { Text(label) },
+                        modifier = Modifier.clickable { onSelect(mins) }
+                    )
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
+}
+
+@Composable
+fun SeekIndicator(target: Long) {
     Box(
-        modifier = Modifier
-            .fillMaxSize(),
+        modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -239,11 +365,6 @@ fun SeekIndicator(target: Long, total: Long) {
                 color = Color.White,
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = "[ ${formatTime(target - total)} ]", // Relative time
-                color = Color.LightGray,
-                style = MaterialTheme.typography.bodySmall
             )
         }
     }
@@ -299,6 +420,8 @@ fun PlayerControlsOverlay(
     currentTime: String,
     batteryLevel: Int,
     isLocked: Boolean,
+    abRange: Pair<Long, Long>?,
+    sleepTimerRemaining: Long?,
     onBack: () -> Unit,
     onPlayPause: () -> Unit,
     onLockToggle: () -> Unit,
@@ -307,17 +430,18 @@ fun PlayerControlsOverlay(
     onToggleSpeed: () -> Unit,
     onToggleDecoder: () -> Unit,
     onToggleResize: () -> Unit,
-    onPiP: () -> Unit
+    onPiP: () -> Unit,
+    onSleepTimerClick: () -> Unit,
+    onABRepeatClick: () -> Unit,
+    onTrackSelectionClick: () -> Unit
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         if (!isLocked) {
-            // Advanced Top Bar (MX Player style)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(Color.Black.copy(alpha = 0.5f))
             ) {
-                // Info Bar (Clock, Battery)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -325,6 +449,10 @@ fun PlayerControlsOverlay(
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    if (sleepTimerRemaining != null) {
+                        Icon(Icons.Default.Timer, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
+                        Text(" ${sleepTimerRemaining / 1000 / 60}m", color = Color.White, fontSize = 10.sp, modifier = Modifier.padding(end = 8.dp))
+                    }
                     Icon(Icons.Default.BatteryStd, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
                     Text(" $batteryLevel%", color = Color.White, fontSize = 10.sp, modifier = Modifier.padding(end = 8.dp))
                     Text(currentTime, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
@@ -348,12 +476,18 @@ fun PlayerControlsOverlay(
                         modifier = Modifier.weight(1f)
                     )
                     
-                    // Decoder
+                    IconButton(onClick = onABRepeatClick) {
+                        Icon(Icons.Default.Repeat, contentDescription = "A-B Repeat", tint = if (abRange != null) MaterialTheme.colorScheme.primary else Color.White)
+                    }
+
+                    IconButton(onClick = onSleepTimerClick) {
+                        Icon(Icons.Default.Timer, contentDescription = "Sleep Timer", tint = if (sleepTimerRemaining != null) MaterialTheme.colorScheme.primary else Color.White)
+                    }
+
                     TextButton(onClick = onToggleDecoder) {
                         Text(decoderType, color = Color.White, fontWeight = FontWeight.Bold)
                     }
 
-                    // Speed
                     TextButton(onClick = onToggleSpeed) {
                         Text("${playbackSpeed}x", color = Color.White, fontWeight = FontWeight.Bold)
                     }
@@ -368,7 +502,6 @@ fun PlayerControlsOverlay(
                 }
             }
 
-            // Center Controls
             Row(
                 modifier = Modifier.align(Alignment.Center),
                 verticalAlignment = Alignment.CenterVertically,
@@ -392,7 +525,6 @@ fun PlayerControlsOverlay(
                 }
             }
 
-            // Advanced Bottom Bar
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -428,11 +560,8 @@ fun PlayerControlsOverlay(
                         IconButton(onClick = onGenerateSubtitles) {
                             Icon(Icons.Default.AutoAwesome, contentDescription = "AI Subtitles", tint = MaterialTheme.colorScheme.primary)
                         }
-                        IconButton(onClick = { /* Audio Menu */ }) {
-                            Icon(Icons.Default.AudioFile, contentDescription = "Audio", tint = Color.White)
-                        }
-                        IconButton(onClick = { /* Subtitle Menu */ }) {
-                            Icon(Icons.Default.Subtitles, contentDescription = "Subtitles", tint = Color.White)
+                        IconButton(onClick = onTrackSelectionClick) {
+                            Icon(Icons.Default.SettingsVoice, contentDescription = "Audio/Subtitle Tracks", tint = Color.White)
                         }
                     }
                     
@@ -442,7 +571,6 @@ fun PlayerControlsOverlay(
                 }
             }
         } else {
-            // Locked UI - Only show lock button
             IconButton(
                 onClick = onLockToggle,
                 modifier = Modifier

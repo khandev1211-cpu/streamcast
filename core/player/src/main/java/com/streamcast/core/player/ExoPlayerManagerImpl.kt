@@ -1,13 +1,22 @@
 package com.streamcast.core.player
 
 import android.content.Context
+import android.content.Intent
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import com.streamcast.core.player.service.PlaybackService
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -26,12 +35,28 @@ class ExoPlayerManagerImpl @Inject constructor(
     private val _playbackState = MutableStateFlow<PlaybackState>(PlaybackState.Idle)
     override val playbackState: StateFlow<PlaybackState> = _playbackState.asStateFlow()
 
+    // A-B Repeat
+    private val _abRepeatRange = MutableStateFlow<Pair<Long, Long>?>(null)
+    override val abRepeatRange: StateFlow<Pair<Long, Long>?> = _abRepeatRange.asStateFlow()
+    
+    private var repeatJob: Job? = null
+    private val scope = CoroutineScope(Dispatchers.Main)
+
     private fun ensurePlayer(): ExoPlayer {
-        return exoPlayer ?: ExoPlayer.Builder(context).build().also {
-            it.addListener(this)
-            exoPlayer = it
-            _playerState.value = it
-        }
+        return exoPlayer ?: ExoPlayer.Builder(context)
+            .setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+                    .setUsage(C.USAGE_MEDIA)
+                    .build(),
+                true // handle audio focus
+            )
+            .setHandleAudioBecomingNoisy(true)
+            .build().also {
+                it.addListener(this)
+                exoPlayer = it
+                _playerState.value = it
+            }
     }
 
     override fun play(source: MediaSource) {
@@ -41,6 +66,10 @@ class ExoPlayerManagerImpl @Inject constructor(
         player.setMediaItem(mediaItem)
         player.prepare()
         player.play()
+        
+        // Start Foreground Service for background play
+        val intent = Intent(context, PlaybackService::class.java)
+        context.startService(intent)
     }
 
     override fun pause() {
@@ -61,6 +90,7 @@ class ExoPlayerManagerImpl @Inject constructor(
     }
 
     override fun release() {
+        repeatJob?.cancel()
         exoPlayer?.removeListener(this)
         exoPlayer?.release()
         exoPlayer = null
@@ -68,7 +98,35 @@ class ExoPlayerManagerImpl @Inject constructor(
         _playbackState.value = PlaybackState.Idle
     }
 
-    // Player.Listener implementation
+    override fun setAbRepeatRange(startMs: Long, endMs: Long) {
+        _abRepeatRange.value = startMs to endMs
+        exoPlayer?.seekTo(startMs)
+        startRepeatMonitor()
+    }
+
+    override fun clearAbRepeatRange() {
+        _abRepeatRange.value = null
+        repeatJob?.cancel()
+    }
+
+    private fun startRepeatMonitor() {
+        repeatJob?.cancel()
+        repeatJob = scope.launch {
+            while (true) {
+                val range = _abRepeatRange.value
+                val player = exoPlayer
+                if (range != null && player != null) {
+                    if (player.currentPosition >= range.second) {
+                        player.seekTo(range.first)
+                    }
+                } else {
+                    break
+                }
+                delay(100)
+            }
+        }
+    }
+
     override fun onPlaybackStateChanged(state: Int) {
         val source = currentMediaSource ?: return
         when (state) {

@@ -2,42 +2,55 @@
 
 ## Navigation structure
 
-Single-activity app using Compose Navigation, with a persistent bottom navigation bar for the four top-level destinations, plus a full-screen player that overlays/replaces the bottom nav during playback.
+Single-activity app using Compose Navigation, featuring a **bottom navigation bar** for the four primary destinations (Video / Audio / IPTV / Profile), plus a full-screen player that takes over the whole screen (no nav bar visible) during playback.
 
 ```
 MainActivity
 └── NavHost
-    ├── LibraryScreen (tab)
-    │   └── PlayerScreen (full-screen, on file tap)
-    ├── IptvScreen (tab)
-    │   ├── AddIptvSourceScreen
-    │   └── PlayerScreen (full-screen, on channel tap)
-    ├── LiveScreen (tab)
-    │   ├── AddLiveUrlScreen
-    │   └── PlayerScreen (full-screen, on channel tap)
-    └── SettingsScreen (tab)
-        ├── VpsConfigScreen
-        ├── SubtitleDefaultsScreen
-        └── StorageManagementScreen
+    ├── MainScreen (bottom nav: Video | Audio | IPTV | Profile)
+    │   ├── VideoTab (Local video files)
+    │   │   └── PlayerScreen (full-screen, on file tap)
+    │   ├── AudioTab (Local audio files)
+    │   │   └── PlayerScreen (full-screen, on file tap)
+    │   ├── IptvTab (IPTV channels & Live streams)
+    │   │   ├── AddIptvSourceScreen
+    │   │   ├── AddLiveUrlScreen
+    │   │   └── PlayerScreen (full-screen, on channel tap)
+    │   └── ProfileTab (Settings & Configuration)
+    │       ├── VpsConfigScreen
+    │       ├── SubtitleDefaultsScreen
+    │       └── StorageManagementScreen
 ```
+
+This ensures critical navigation is always reachable at the bottom of the screen, while keeping the content-specific logic decoupled.
 
 ## Screen inventory
 
-### `LibraryScreen`
-- Grid/list of scanned local video & audio files.
+### `MainScreen`
+- Hosts the bottom navigation bar (Video | Audio | IPTV | Profile).
+- Each tab keeps its own scroll/filter state when switching tabs, rather than resetting.
+
+### `VideoTab`
+- Grid of scanned local video files, grouped by device folder by default (folder-first browsing); toggle to a flat compact list.
 - Manual "add file" action (system file picker).
 - Tapping an item opens `PlayerScreen`.
 
-### `IptvScreen`
+### `AudioTab`
+- List/Grid of scanned local audio files, grouped by album or folder.
+- Playback controls integration (mini-player when navigating).
+- Tapping an item opens `PlayerScreen`.
+
+### `IptvTab`
+- Unified destination for IPTV playlists and user-added live streams.
 - List of configured `IptvSource`s; tapping one shows its channel list (grouped by category).
-- "Add Source" action → `AddIptvSourceScreen` (choose M3U URL/file or Xtream login).
-- Search and favorites filter across all IPTV channels.
+- "Add Source" action → choice of `AddIptvSourceScreen` or `AddLiveUrlScreen`.
+- Search and favorites filter across all channels.
 
 ### `AddIptvSourceScreen`
 - Form: source type toggle (M3U vs Xtream), relevant input fields per type.
 - Validation feedback (e.g., "couldn't reach playlist URL") before saving.
 
-### `LiveScreen`
+### `LiveTab`
 - List of user-added live "channels."
 - "Add Live URL" action → `AddLiveUrlScreen`.
 
@@ -45,14 +58,16 @@ MainActivity
 - Single URL input, optional name field, validation check before saving (see `08-LIVE-STREAMS.md`).
 
 ### `PlayerScreen` (shared across all three content types)
-- Full-screen video surface.
-- Auto-hiding controls overlay: play/pause, seek bar, speed, lock, subtitle button.
-- EPG "now/next" strip — only rendered when `SourceMetadata` includes EPG info (IPTV only).
+- Full-screen video surface, no tabs/nav chrome visible during playback.
+- Gesture zones: left-half vertical swipe = brightness, right-half vertical swipe = volume, double-tap left/right = seek ±10s (MX-Player-style — see `14-UI-UX-DESIGN-SYSTEM.md`).
+- Minimal auto-hiding overlay: play/pause, seek bar, prev/next, lock icon.
+- Single "more options" corner icon opening a sheet for: subtitle language/generation, subtitle styling, audio track, playback speed, and (IPTV only) EPG "now/next" details.
 - Subtitle generation flow: language picker → loading state → rendered subtitle overlay → error state if applicable.
 
-### `SettingsScreen`
+### `ProfileTab`
 - Entry points to `VpsConfigScreen`, `SubtitleDefaultsScreen`, `StorageManagementScreen`.
-- Theme toggle (if/when light mode is added).
+- User profile summary (if applicable) and app version info.
+- Theme toggle and general app settings.
 
 ### `VpsConfigScreen`
 - VPS endpoint URL field, API key field (masked input).
@@ -72,4 +87,5 @@ MainActivity
 
 ## Navigation between tabs during playback
 
-- Playback (especially audio-only/background mode, later phase) should be able to continue while the user navigates back to browse the Library or IPTV tab — this requires playback state to live above the `PlayerScreen` composable itself (e.g., in a shared/app-level ViewModel or service) rather than being torn down when the screen is left.
+- Playback (especially audio-only/background mode) should be able to continue while the user navigates between the Video, Audio, or IPTV tabs — this requires playback state to live above the `PlayerScreen` composable itself (e.g., in a shared/app-level ViewModel or service) rather than being torn down when the screen is left.
+- Switching between `VideoTab` / `AudioTab` / `IptvTab` / `ProfileTab` should preserve each tab's own scroll position and filter/search state — a user checking IPTV mid-scroll and returning to Video shouldn't lose their place in either.
