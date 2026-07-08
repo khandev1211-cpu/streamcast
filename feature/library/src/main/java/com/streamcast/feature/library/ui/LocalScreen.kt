@@ -5,7 +5,7 @@ import com.streamcast.core.player.MediaSource
 
 @Composable
 fun LocalScreen(
-    onMediaClick: (MediaSource) -> Unit
+    onMediaClick: (MediaSource, List<MediaSource>) -> Unit
 ) {
     LibraryScreen(onVideoClick = onMediaClick)
 }

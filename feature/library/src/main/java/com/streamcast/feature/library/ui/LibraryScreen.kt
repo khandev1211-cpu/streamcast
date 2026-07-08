@@ -35,7 +35,7 @@ import com.streamcast.feature.library.viewmodel.LibraryViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LibraryScreen(
-    onVideoClick: (MediaSource) -> Unit,
+    onVideoClick: (MediaSource, List<MediaSource>) -> Unit,
     viewModel: LibraryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -85,8 +85,13 @@ fun LibraryScreen(
             )
         },
         floatingActionButton = {
+            val successState = uiState as? LibraryUiState.Success
+            val lastPlayed = successState?.folders?.flatMap { it.items ?: emptyList() }?.firstOrNull() // Simplified: first item
+            
             FloatingActionButton(
-                onClick = { /* Quick Play */ },
+                onClick = { 
+                    lastPlayed?.let { onVideoClick(it, emptyList()) }
+                },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
             ) {
@@ -115,22 +120,22 @@ fun LibraryScreen(
                             state.folders
                         }
 
-                        if (isGridView) {
-                            MediaGridContent(
-                                folders = foldersToShow,
-                                mediaItems = currentFolder?.items ?: emptyList(),
-                                onFolderClick = { viewModel.navigateInto(it) },
-                                onMediaClick = onVideoClick
-                            )
-                        } else {
-                            MediaListContent(
-                                folders = foldersToShow,
-                                mediaItems = currentFolder?.items ?: emptyList(),
-                                onFolderClick = { viewModel.navigateInto(it) },
-                                onMediaClick = onVideoClick,
-                                onConvertClick = { viewModel.convertToAudio(it) }
-                            )
-                        }
+                    if (isGridView) {
+                        MediaGridContent(
+                            folders = foldersToShow,
+                            mediaItems = currentFolder?.items ?: emptyList(),
+                            onFolderClick = { viewModel.navigateInto(it) },
+                            onMediaClick = { onVideoClick(it, currentFolder?.items ?: emptyList()) }
+                        )
+                    } else {
+                        MediaListContent(
+                            folders = foldersToShow,
+                            mediaItems = currentFolder?.items ?: emptyList(),
+                            onFolderClick = { viewModel.navigateInto(it) },
+                            onMediaClick = { onVideoClick(it, currentFolder?.items ?: emptyList()) },
+                            onConvertClick = { viewModel.convertToAudio(it) }
+                        )
+                    }
                     }
                     is LibraryUiState.Error -> {
                         Text(text = "Error: ${state.message}", color = MaterialTheme.colorScheme.error, modifier = Modifier.align(Alignment.Center))

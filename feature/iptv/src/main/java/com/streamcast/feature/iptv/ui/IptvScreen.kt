@@ -22,7 +22,7 @@ import com.streamcast.feature.iptv.viewmodel.IptvViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun IptvScreen(
-    onChannelClick: (MediaSource) -> Unit,
+    onChannelClick: (MediaSource, List<MediaSource>) -> Unit,
     viewModel: IptvViewModel = hiltViewModel()
 ) {
     var selectedTabIndex by remember { mutableIntStateOf(0) }
@@ -90,7 +90,8 @@ fun IptvScreen(
                                                 type = SourceType.IPTV,
                                                 displayName = channel.name,
                                                 isCacheable = false
-                                            )
+                                            ),
+                                            emptyList()
                                         )
                                     }
                                 )

@@ -91,6 +91,13 @@ class PlayerViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            playbackState.collect { state ->
+                if (state is PlaybackState.Ended) {
+                    playNext()
+                }
+            }
+        }
+        viewModelScope.launch {
             while (true) {
                 val playerInstance = player.value
                 if (playerInstance != null) {
@@ -198,16 +205,25 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun playNext() {
-        if (currentMediaIndex < _currentFolderItems.value.size - 1) {
-            currentMediaIndex++
-            play(_currentFolderItems.value[currentMediaIndex])
-        }
+        player.value?.seekToNext()
     }
 
     fun playPrevious() {
-        if (currentMediaIndex > 0) {
-            currentMediaIndex--
-            play(_currentFolderItems.value[currentMediaIndex])
+        player.value?.seekToPrevious()
+    }
+
+    fun playPlaylist(sources: List<MediaSource>, startIndex: Int) {
+        viewModelScope.launch {
+            _currentFolderItems.value = sources
+            currentMediaIndex = startIndex
+            
+            val source = sources[startIndex]
+            val savedMedia = localMediaDao.getById(source.id)
+            if (savedMedia != null && savedMedia.lastPositionMs > 5000) {
+                _resumePosition.value = savedMedia.lastPositionMs
+            }
+            
+            playerManager.playPlaylist(sources, startIndex)
         }
     }
 

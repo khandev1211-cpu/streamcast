@@ -60,14 +60,25 @@ class ExoPlayerManagerImpl @Inject constructor(
     }
 
     override fun play(source: MediaSource) {
+        playPlaylist(listOf(source), 0)
+    }
+
+    override fun playPlaylist(sources: List<MediaSource>, startIndex: Int) {
         val player = ensurePlayer()
-        currentMediaSource = source
-        val mediaItem = MediaItem.fromUri(source.uri)
-        player.setMediaItem(mediaItem)
+        player.clearMediaItems()
+        val mediaItems = sources.map { 
+            MediaItem.Builder()
+                .setUri(it.uri)
+                .setMediaId(it.id)
+                .setTag(it)
+                .build()
+        }
+        player.setMediaItems(mediaItems, startIndex, C.TIME_UNSET)
         player.prepare()
         player.play()
         
-        // Start Foreground Service for background play
+        currentMediaSource = sources[startIndex]
+
         val intent = Intent(context, PlaybackService::class.java)
         context.startService(intent)
     }
@@ -127,6 +138,14 @@ class ExoPlayerManagerImpl @Inject constructor(
                     break
                 }
                 delay(100)
+            }
+        }
+    }
+
+    override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+        mediaItem?.localConfiguration?.tag?.let {
+            if (it is MediaSource) {
+                currentMediaSource = it
             }
         }
     }

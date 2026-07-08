@@ -14,6 +14,7 @@ interface PlayerManager {
     val abRepeatRange: StateFlow<Pair<Long, Long>?>
 
     fun play(source: MediaSource)
+    fun playPlaylist(sources: List<MediaSource>, startIndex: Int)
     fun pause()
     fun resume()
     fun seekTo(positionMs: Long)

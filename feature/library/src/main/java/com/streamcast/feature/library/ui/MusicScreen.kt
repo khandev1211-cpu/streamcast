@@ -12,7 +12,7 @@ import com.streamcast.core.player.MediaSource
 
 @Composable
 fun MusicScreen(
-    onMediaClick: (MediaSource) -> Unit
+    onMediaClick: (MediaSource, List<MediaSource>) -> Unit
 ) {
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Box(contentAlignment = Alignment.Center) {

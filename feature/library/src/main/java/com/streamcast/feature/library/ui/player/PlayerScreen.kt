@@ -266,10 +266,10 @@ fun PlayerScreen(
                 onRotate = {
                     activity?.let {
                         val current = it.requestedOrientation
-                        it.requestedOrientation = if (current == android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE) {
+                        it.requestedOrientation = if (current == android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE || current == android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE) {
                             android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
                         } else {
-                            android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                            android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
                         }
                     }
                 },

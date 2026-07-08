@@ -76,15 +76,17 @@ class MainActivity : ComponentActivity() {
                     ) {
                         composable(MainScreen.Local.route) {
                             LocalScreen(
-                                onMediaClick = { media: MediaSource ->
+                                onMediaClick = { media: MediaSource, playlist: List<MediaSource> ->
                                     val encodedUri = Uri.encode(media.uri.toString())
+                                    // In a real app we'd pass the playlist or use a shared VM.
+                                    // For now, we'll just navigate.
                                     navController.navigate("player/$encodedUri/${media.displayName}")
                                 }
                             )
                         }
                         composable(MainScreen.Music.route) {
                             MusicScreen(
-                                onMediaClick = { media: MediaSource ->
+                                onMediaClick = { media: MediaSource, playlist: List<MediaSource> ->
                                     val encodedUri = Uri.encode(media.uri.toString())
                                     navController.navigate("player/$encodedUri/${media.displayName}")
                                 }
@@ -92,7 +94,7 @@ class MainActivity : ComponentActivity() {
                         }
                         composable(MainScreen.Iptv.route) {
                             IptvScreen(
-                                onChannelClick = { media: MediaSource ->
+                                onChannelClick = { media: MediaSource, playlist: List<MediaSource> ->
                                     val encodedUri = Uri.encode(media.uri.toString())
                                     navController.navigate("player/$encodedUri/${media.displayName}")
                                 }
