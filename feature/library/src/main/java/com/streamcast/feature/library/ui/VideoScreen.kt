@@ -7,7 +7,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 
 @Composable
 fun VideoScreen(
-    onVideoClick: (MediaSource) -> Unit,
+    onVideoClick: (MediaSource, List<MediaSource>) -> Unit,
     viewModel: LibraryViewModel = hiltViewModel()
 ) {
     // Reuse LibraryScreen logic but filtered for video
