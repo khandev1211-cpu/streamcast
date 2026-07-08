@@ -8,7 +8,7 @@ Dark-first, modern, minimal-chrome-during-playback. The player itself should fee
 
 ### What "MX Player style" means concretely here
 
-- **Top tabs, not just bottom nav** — primary navigation (Library / IPTV / Live) sits as tabs at the top of the home screen, MX-Player-style, rather than relying only on bottom nav. Settings lives behind an overflow/menu icon rather than taking up a full tab slot.
+- **Bottom navigation bar only** — primary navigation (Local / Music / IPTV / Me) sits at the bottom of the home screen, ensuring the top remains clean and minimalist.
 - **Grid-first local library, grouped by folder** — local videos display as a thumbnail grid, grouped by device folder first (mirroring how MX Player surfaces "Video" by folder before flattening to one list). A grid/list toggle remains available.
 - **Gesture-driven player screen** — swipe vertically on the left half of the screen for brightness, right half for volume; double-tap left/right to seek ±10s; pinch or double-tap-and-hold to resize/zoom video. These gestures work without any visible control, which is core to why MX Player's player screen feels fast.
 - **Minimal always-visible controls, everything else tucked into a corner menu** — the visible overlay is just a seek bar, play/pause, and prev/next. Subtitle language, audio track, playback speed, and subtitle styling live behind a single "more options" icon (top-right corner, MX-Player-style) rather than spread across the main overlay.
@@ -86,7 +86,7 @@ The following locks down precise layout details captured directly from MX Player
 **Bottom navigation bar (4 tabs):**
 - **Local** (folder icon) — local library, current screen
 - **Music** (music-note icon) — audio-only library view
-- **Screen** (replaces MX Player's "Transfer" tab) — this app's dedicated screen for casting/screen-related functionality rather than MX Player's Wi-Fi file-transfer feature; icon should visually imply "screen/display" (e.g., a monitor or cast-style icon) rather than the transfer arrows MX Player uses
+- **IPTV** (tv icon) — IPTV and Live stream destination
 - **Me** (profile icon) — settings/profile entry point
 
 ### Player screen — top bar

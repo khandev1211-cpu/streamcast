@@ -27,7 +27,7 @@ import com.streamcast.core.player.MediaSource
 import com.streamcast.core.player.SourceType
 import com.streamcast.feature.library.ui.LocalScreen
 import com.streamcast.feature.library.ui.MusicScreen
-import com.streamcast.feature.library.ui.ScreenScreen
+import com.streamcast.feature.library.ui.IptvScreen
 import com.streamcast.feature.library.ui.MeScreen
 import com.streamcast.feature.library.ui.player.PlayerScreen
 import com.streamcast.ui.theme.StreamCastTheme
@@ -59,7 +59,7 @@ class MainActivity : ComponentActivity() {
 
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentDestination = navBackStackEntry?.destination
-                val currentRoute = currentDestination?.route ?: "library"
+                val currentRoute = currentDestination?.route ?: "local"
                 val isPlayerScreen = currentRoute.startsWith("player")
 
                 Scaffold(
@@ -90,8 +90,13 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                         }
-                        composable(MainScreen.Screen.route) { 
-                            ScreenScreen()
+                        composable(MainScreen.Iptv.route) {
+                            IptvScreen(
+                                onChannelClick = { media: MediaSource ->
+                                    val encodedUri = Uri.encode(media.uri.toString())
+                                    navController.navigate("player/$encodedUri/${media.displayName}")
+                                }
+                            )
                         }
                         composable(MainScreen.Me.route) { 
                             MeScreen()
@@ -128,13 +133,13 @@ class MainActivity : ComponentActivity() {
 sealed class MainScreen(val route: String, val label: String, val icon: ImageVector) {
     object Local : MainScreen("local", "Local", Icons.Default.Folder)
     object Music : MainScreen("music", "Music", Icons.Default.MusicNote)
-    object Screen : MainScreen("screen", "Screen", Icons.Default.Cast)
+    object Iptv : MainScreen("iptv", "IPTV", Icons.Default.Tv)
     object Me : MainScreen("me", "Me", Icons.Default.Person)
 }
 
 @Composable
 fun StreamCastBottomBar(navController: androidx.navigation.NavHostController) {
-    val items = listOf(MainScreen.Local, MainScreen.Music, MainScreen.Screen, MainScreen.Me)
+    val items = listOf(MainScreen.Local, MainScreen.Music, MainScreen.Iptv, MainScreen.Me)
     NavigationBar(
         containerColor = MaterialTheme.colorScheme.surface,
         tonalElevation = 8.dp

@@ -4,25 +4,21 @@
 
 **Updated to match the actual MX Player reference screenshots** (see `14-UI-UX-DESIGN-SYSTEM.md` → "Exact Screen-by-Screen Reference"): MX Player uses a **bottom navigation bar**, not top tabs. This supersedes the earlier top-tab description below wherever they conflict.
 
-Single-activity app using Compose Navigation, with a persistent **bottom nav bar** mirroring MX Player's own (Local / Music / Transfer / Me), adapted for this app as:
+Single-activity app using Compose Navigation, with a persistent **bottom nav bar** mirroring MX Player's own (Local / Music / IPTV / Me):
 
-- **Local** — local file library (folders + videos), with IPTV and Live surfaced as segmented sub-tabs at the top of this screen (Videos | IPTV | Live), matching how MX Player itself uses top segmented tabs *within* a bottom-nav destination (e.g., its own Video/Audio split).
+- **Local** — local file library (folders + videos).
 - **Music** — audio-only view of the local library.
-- **Screen** — replaces MX Player's "Transfer" tab; this app's dedicated screen-related destination (casting/display, not Wi-Fi file transfer).
+- **IPTV** — unified destination for IPTV playlists and user-added Live URLs.
 - **Me** — settings/profile entry point (VPS config, subtitle defaults, storage management).
 
 ```
 MainActivity
 └── NavHost
-    ├── LocalScreen (bottom nav tab)
-    │   ├── top segmented control: Videos | IPTV | Live
-    │   │   ├── VideosSubTab → folder/grid browsing
-    │   │   ├── IptvSubTab → AddIptvSourceScreen, channel list
-    │   │   └── LiveSubTab → AddLiveUrlScreen, channel list
+    ├── LocalScreen (bottom nav tab) → folder/grid browsing
     │   └── PlayerScreen (full-screen, on any item tap)
     ├── MusicScreen (bottom nav tab)
     │   └── PlayerScreen (full-screen, on file tap)
-    ├── ScreenScreen (bottom nav tab) — casting/display features
+    ├── IptvScreen (bottom nav tab) → IPTV sources, Live URLs
     └── MeScreen (bottom nav tab)
         ├── VpsConfigScreen
         ├── SubtitleDefaultsScreen
@@ -33,11 +29,7 @@ MainActivity
 
 ### `LocalScreen` (bottom nav: "Local")
 - Top bar: back/menu icon, title, right-aligned folder/browse icon, search icon, layout-toggle icon (grid/list) — per `14-UI-UX-DESIGN-SYSTEM.md` exact reference.
-- Top segmented control: **Videos | IPTV | Live** — this is where this app's IPTV and Live features live, since MX Player's own bottom nav has no room for them.
-- `VideosSubTab`: Folders section + Videos section, folder-first grid browsing (see design doc for exact row layout). Tapping an item opens `PlayerScreen`.
-- `IptvSubTab`: list of configured `IptvSource`s; tapping one shows its channel list (grouped by category). "Add Source" action → `AddIptvSourceScreen`. Search and favorites filter.
-- `LiveSubTab`: list of user-added live "channels." "Add Live URL" action → `AddLiveUrlScreen`.
-- Each sub-tab keeps its own scroll/filter state when switching, rather than resetting.
+- Folders section + Videos section, folder-first grid browsing. Tapping an item opens `PlayerScreen`.
 
 ### `AddIptvSourceScreen`
 - Form: source type toggle (M3U vs Xtream), relevant input fields per type.
@@ -59,9 +51,10 @@ MainActivity
 - Three-dot overflow opens the full grid menu (Playing Queue, Aspect Ratio, Display Settings, Bookmark, Cut, Favourite, Add To Playlist, Information, Share, Network Stream, Tutorial, More) plus Video Display / Shortcuts toggles.
 - Subtitle generation flow (this app's addition, not in MX Player): language picker → loading state → rendered subtitle overlay → error state if applicable, reachable from the subtitle icon within the quick-tools row.
 
-### `ScreenScreen` (bottom nav: "Screen")
-- Replaces MX Player's "Transfer" tab. Houses this app's casting/display-related functionality rather than Wi-Fi file transfer.
-- Exact feature scope TBD — flagged here as a placeholder destination until casting/display requirements are defined in more detail.
+### `IptvScreen` (bottom nav: "IPTV")
+- Unified destination for IPTV playlists and user-added live streams.
+- List of configured `IptvSource`s; tapping one shows its channel list.
+- Choice of `AddIptvSourceScreen` or `AddLiveUrlScreen` actions.
 
 ### `MeScreen` (bottom nav: "Me")
 - Entry points to `VpsConfigScreen`, `SubtitleDefaultsScreen`, `StorageManagementScreen`.
