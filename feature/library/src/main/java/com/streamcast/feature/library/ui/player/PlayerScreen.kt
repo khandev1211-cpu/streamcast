@@ -72,11 +72,19 @@ fun PlayerScreen(
     val subtitleFontSize by viewModel.subtitleFontSize.collectAsState()
     val subtitleColor by viewModel.subtitleColor.collectAsState()
     val subtitleBgOpacity by viewModel.subtitleBackgroundOpacity.collectAsState()
+    val resizeModeVm by viewModel.resizeMode.collectAsState()
     
     var showControls by remember { mutableStateOf(true) }
     var isLocked by remember { mutableStateOf(false) }
-    var resizeMode by remember { mutableStateOf(AspectRatioFrameLayout.RESIZE_MODE_FIT) }
     var scale by remember { mutableStateOf(1f) }
+
+    val currentResizeMode = when(resizeModeVm) {
+        0 -> AspectRatioFrameLayout.RESIZE_MODE_FIT
+        1 -> AspectRatioFrameLayout.RESIZE_MODE_FILL
+        2 -> AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH
+        3 -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+        else -> AspectRatioFrameLayout.RESIZE_MODE_FIT
+    }
 
     val mxBlue = Color(0xFF00A0E9)
 
@@ -90,6 +98,8 @@ fun PlayerScreen(
     var showSleepTimerDialog by remember { mutableStateOf(false) }
     var showABRepeatControls by remember { mutableStateOf(false) }
     var showTrackSelectionDialog by remember { mutableStateOf(false) }
+    var showVideoInfoDialog by remember { mutableStateOf(false) }
+    var showSubtitleStyleDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -190,7 +200,7 @@ fun PlayerScreen(
             },
             update = { playerView ->
                 playerView.player = player
-                playerView.resizeMode = resizeMode
+                playerView.resizeMode = currentResizeMode
             },
             modifier = Modifier
                 .fillMaxSize()
@@ -249,12 +259,8 @@ fun PlayerScreen(
                 onToggleSpeed = { viewModel.togglePlaybackSpeed() },
                 onToggleDecoder = { viewModel.toggleDecoder() },
                 onToggleResize = {
-                    resizeMode = when (resizeMode) {
-                        AspectRatioFrameLayout.RESIZE_MODE_FIT -> AspectRatioFrameLayout.RESIZE_MODE_FILL
-                        AspectRatioFrameLayout.RESIZE_MODE_FILL -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-                        else -> AspectRatioFrameLayout.RESIZE_MODE_FIT
-                    }
-                    if (resizeMode == AspectRatioFrameLayout.RESIZE_MODE_FIT) scale = 1f
+                    viewModel.toggleResizeMode()
+                    if (resizeModeVm == 0) scale = 1f
                 },
                 onPiP = { activity?.enterPictureInPictureMode() },
                 onSleepTimerClick = { showSleepTimerDialog = true },
@@ -273,6 +279,8 @@ fun PlayerScreen(
                         }
                     }
                 },
+                onShowInfo = { showVideoInfoDialog = true },
+                onShowSubtitleStyle = { showSubtitleStyleDialog = true },
                 subtitleOffset = subtitleOffset,
                 onAdjustOffset = { viewModel.adjustSubtitleSyncOffset(it) },
                 mxBlue = mxBlue
@@ -315,6 +323,25 @@ fun PlayerScreen(
         TrackSelectionDialog(
             player = player,
             onDismiss = { showTrackSelectionDialog = false }
+        )
+    }
+
+    if (showVideoInfoDialog) {
+        VideoInfoDialog(
+            mediaSource = mediaSource,
+            onDismiss = { showVideoInfoDialog = false }
+        )
+    }
+
+    if (showSubtitleStyleDialog) {
+        SubtitleStyleDialog(
+            currentSize = subtitleFontSize,
+            currentColor = subtitleColor,
+            currentOpacity = subtitleBgOpacity,
+            onDismiss = { showSubtitleStyleDialog = false },
+            onStyleChange = { size: Float, color: Long, opacity: Float ->
+                viewModel.setSubtitleStyle(size, color, opacity)
+            }
         )
     }
 
@@ -517,6 +544,8 @@ fun PlayerControlsOverlay(
     onPrev: () -> Unit,
     onNext: () -> Unit,
     onRotate: () -> Unit,
+    onShowInfo: () -> Unit,
+    onShowSubtitleStyle: () -> Unit,
     subtitleOffset: Long = 0,
     onAdjustOffset: (Long) -> Unit = {},
     mxBlue: Color = Color.Cyan
@@ -779,7 +808,12 @@ fun PlayerControlsOverlay(
         }
 
         if (showOverflowGrid) {
-            OverflowGridMenu(onDismiss = { showOverflowGrid = false })
+            OverflowGridMenu(
+                onDismiss = { showOverflowGrid = false },
+                onInfoClick = onShowInfo,
+                onDisplayClick = { /* Aspect ratio toggle */ },
+                onSubtitleStyleClick = onShowSubtitleStyle
+            )
         }
     }
 }
@@ -796,7 +830,12 @@ fun ShortcutItem(icon: ImageVector, label: String, tint: Color = Color.White, on
 }
 
 @Composable
-fun OverflowGridMenu(onDismiss: () -> Unit) {
+fun OverflowGridMenu(
+    onDismiss: () -> Unit,
+    onInfoClick: () -> Unit = {},
+    onDisplayClick: () -> Unit = {},
+    onSubtitleStyleClick: () -> Unit = {}
+) {
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = Color.Black.copy(alpha = 0.7f)
@@ -811,18 +850,18 @@ fun OverflowGridMenu(onDismiss: () -> Unit) {
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     val items = listOf(
-                        "Playing Queue" to Icons.Default.QueueMusic,
-                        "Aspect Ratio" to Icons.Default.AspectRatio,
-                        "Display" to Icons.Default.SettingsSystemDaydream,
-                        "Bookmark" to Icons.Default.Bookmark,
-                        "Cut" to Icons.Default.ContentCut,
-                        "Favourite" to Icons.Default.Favorite,
-                        "Playlist" to Icons.Default.PlaylistAdd,
-                        "Info" to Icons.Default.Info,
-                        "Share" to Icons.Default.Share,
-                        "Stream" to Icons.Default.Link,
-                        "Tutorial" to Icons.Default.Help,
-                        "More" to Icons.Default.Settings
+                        "Playing Queue" to Icons.Default.QueueMusic to {},
+                        "Aspect Ratio" to Icons.Default.AspectRatio to onDisplayClick,
+                        "Subtitle Settings" to Icons.Default.Subtitles to onSubtitleStyleClick,
+                        "Bookmark" to Icons.Default.Bookmark to {},
+                        "Cut" to Icons.Default.ContentCut to {},
+                        "Favourite" to Icons.Default.Favorite to {},
+                        "Playlist" to Icons.Default.PlaylistAdd to {},
+                        "Info" to Icons.Default.Info to onInfoClick,
+                        "Share" to Icons.Default.Share to {},
+                        "Stream" to Icons.Default.Link to {},
+                        "Tutorial" to Icons.Default.Help to {},
+                        "More" to Icons.Default.Settings to {}
                     )
                     
                     androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
@@ -830,10 +869,16 @@ fun OverflowGridMenu(onDismiss: () -> Unit) {
                         modifier = Modifier.height(240.dp)
                     ) {
                         items(items) { item ->
-                            val (label, icon) = item
+                            val (labelIcon, onClick) = item
+                            val (label, icon) = labelIcon
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier.padding(vertical = 8.dp)
+                                modifier = Modifier
+                                    .padding(vertical = 8.dp)
+                                    .clickable { 
+                                        onClick()
+                                        onDismiss()
+                                    }
                             ) {
                                 Icon(icon, contentDescription = label, tint = Color.White, modifier = Modifier.size(24.dp))
                                 Text(label, color = Color.White, fontSize = 10.sp, textAlign = TextAlign.Center)
@@ -863,6 +908,83 @@ fun OverflowGridMenu(onDismiss: () -> Unit) {
             }
         }
     }
+}
+
+@Composable
+fun VideoInfoDialog(
+    mediaSource: MediaSource,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Information") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                InfoRow("File", mediaSource.displayName)
+                InfoRow("Path", mediaSource.uri.toString())
+                InfoRow("Type", mediaSource.type.name)
+                mediaSource.metadata?.duration?.let {
+                    InfoRow("Duration", formatTime(it))
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("OK") }
+        }
+    )
+}
+
+@Composable
+fun InfoRow(label: String, value: String) {
+    Column {
+        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+        Text(value, style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+@Composable
+fun SubtitleStyleDialog(
+    currentSize: Float,
+    currentColor: Long,
+    currentOpacity: Float,
+    onDismiss: () -> Unit,
+    onStyleChange: (Float, Long, Float) -> Unit
+) {
+    var size by remember { mutableFloatStateOf(currentSize) }
+    var opacity by remember { mutableFloatStateOf(currentOpacity) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Subtitle Style") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text("Font Size: ${size.toInt()}")
+                Slider(
+                    value = size,
+                    onValueChange = { size = it },
+                    valueRange = 10f..40f
+                )
+                
+                Text("Background Opacity: ${(opacity * 100).toInt()}%")
+                Slider(
+                    value = opacity,
+                    onValueChange = { opacity = it },
+                    valueRange = 0f..1f
+                )
+            }
+        },
+        confirmButton = {
+            Button(onClick = { 
+                onStyleChange(size, currentColor, opacity)
+                onDismiss()
+            }) {
+                Text("Apply")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
 }
 
 fun formatTime(ms: Long): String {

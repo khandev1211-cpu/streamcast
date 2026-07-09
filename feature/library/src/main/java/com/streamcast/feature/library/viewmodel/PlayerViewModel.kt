@@ -54,6 +54,12 @@ class PlayerViewModel @Inject constructor(
     private val _isTimeRemainingMode = MutableStateFlow(false)
     val isTimeRemainingMode: StateFlow<Boolean> = _isTimeRemainingMode.asStateFlow()
 
+    private val _resizeMode = MutableStateFlow(0) // 0: Fit, 3: Zoom, 1: Fill, 2: Stretch
+    val resizeMode: StateFlow<Int> = _resizeMode.asStateFlow()
+
+    private val _isFavourite = MutableStateFlow(false)
+    val isFavourite: StateFlow<Boolean> = _isFavourite.asStateFlow()
+
     // Subtitle Styling
     private val _subtitleFontSize = MutableStateFlow(18f)
     val subtitleFontSize = _subtitleFontSize.asStateFlow()
@@ -234,6 +240,18 @@ class PlayerViewModel @Inject constructor(
 
     fun toggleTimeMode() {
         _isTimeRemainingMode.value = !_isTimeRemainingMode.value
+    }
+
+    fun toggleResizeMode() {
+        // MX Player cycles: Fit, Fill, Stretch, Zoom
+        // 0: Fit, 1: Fill, 2: Stretch, 3: Zoom, 4: Fit with cropping
+        val current = _resizeMode.value
+        _resizeMode.value = (current + 1) % 4
+    }
+
+    fun toggleFavourite() {
+        _isFavourite.value = !_isFavourite.value
+        // TODO: Persist to DB
     }
 
     fun setSubtitleSyncOffset(offsetMs: Long) {
