@@ -1,22 +1,19 @@
 package com.streamcast.feature.library.ui
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
+import androidx.compose.runtime.LaunchedEffect
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.streamcast.core.player.MediaSource
+import com.streamcast.feature.library.viewmodel.LibraryViewModel
 
 @Composable
 fun MusicScreen(
-    onMediaClick: (MediaSource, List<MediaSource>) -> Unit
+    onMediaClick: (MediaSource, List<MediaSource>) -> Unit,
+    viewModel: LibraryViewModel = hiltViewModel()
 ) {
-    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        Box(contentAlignment = Alignment.Center) {
-            Text(text = "Music Library", style = MaterialTheme.typography.headlineMedium)
-        }
+    LaunchedEffect(Unit) {
+        viewModel.setMediaType("audio")
     }
+    // Reuse LibraryScreen logic but filtered for audio
+    LibraryScreen(onVideoClick = onMediaClick, viewModel = viewModel)
 }

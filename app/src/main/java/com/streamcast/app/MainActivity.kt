@@ -29,6 +29,7 @@ import com.streamcast.feature.library.ui.LocalScreen
 import com.streamcast.feature.library.ui.MusicScreen
 import com.streamcast.feature.iptv.ui.IptvScreen
 import com.streamcast.feature.library.ui.MeScreen
+import com.streamcast.feature.library.ui.player.AudioPlayerScreen
 import com.streamcast.feature.library.ui.player.PlayerScreen
 import com.streamcast.ui.theme.StreamCastTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -88,7 +89,7 @@ class MainActivity : ComponentActivity() {
                             MusicScreen(
                                 onMediaClick = { media: MediaSource, playlist: List<MediaSource> ->
                                     val encodedUri = Uri.encode(media.uri.toString())
-                                    navController.navigate("player/$encodedUri/${media.displayName}")
+                                    navController.navigate("audio-player/$encodedUri/${media.displayName}")
                                 }
                             )
                         }
@@ -121,6 +122,28 @@ class MainActivity : ComponentActivity() {
                                 isCacheable = true
                             )
                             PlayerScreen(
+                                mediaSource = mediaSource,
+                                onBack = { navController.popBackStack() }
+                            )
+                        }
+                        composable(
+                            route = "audio-player/{uri}/{name}",
+                            arguments = listOf(
+                                navArgument("uri") { type = NavType.StringType },
+                                navArgument("name") { type = NavType.StringType }
+                            )
+                        ) { backStackEntry ->
+                            val uri = Uri.parse(Uri.decode(backStackEntry.arguments?.getString("uri")))
+                            val name = backStackEntry.arguments?.getString("name") ?: "Audio"
+                            
+                            val mediaSource = MediaSource(
+                                id = uri.toString(),
+                                uri = uri,
+                                type = SourceType.LOCAL,
+                                displayName = name,
+                                isCacheable = true
+                            )
+                            AudioPlayerScreen(
                                 mediaSource = mediaSource,
                                 onBack = { navController.popBackStack() }
                             )

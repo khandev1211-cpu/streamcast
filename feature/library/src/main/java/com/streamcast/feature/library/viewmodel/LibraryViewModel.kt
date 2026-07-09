@@ -34,7 +34,16 @@ class LibraryViewModel @Inject constructor(
     private val _isHierarchical = MutableStateFlow(false) // Default to MX Player's "All Folders" flat view
     val isHierarchical: StateFlow<Boolean> = _isHierarchical.asStateFlow()
 
+    private val _mediaType = MutableStateFlow("all")
+    val mediaType: StateFlow<String> = _mediaType.asStateFlow()
+
     init {
+        loadMedia()
+    }
+
+    fun setMediaType(type: String) {
+        _mediaType.value = type
+        _folderStack.value = emptyList() // Reset to root when changing type
         loadMedia()
     }
 
@@ -43,8 +52,19 @@ class LibraryViewModel @Inject constructor(
             _uiState.value = LibraryUiState.Loading
             try {
                 val currentPath = _folderStack.value.lastOrNull()?.path
-                val folders = repository.getMediaFolders(currentPath, _isHierarchical.value)
-                _uiState.value = LibraryUiState.Success(folders)
+                val folders = repository.getMediaFolders(currentPath, _isHierarchical.value, _mediaType.value)
+                
+                if (!_isHierarchical.value) {
+                    // Flat mode
+                    val items = _folderStack.value.lastOrNull()?.items ?: emptyList()
+                    _uiState.value = LibraryUiState.Success(folders, items)
+                } else {
+                    // Hierarchical mode
+                    val itemsFolder = folders.find { it.name == "." }
+                    val filteredFolders = folders.filter { it.name != "." }
+                    val items = itemsFolder?.items ?: emptyList()
+                    _uiState.value = LibraryUiState.Success(filteredFolders, items)
+                }
             } catch (e: Exception) {
                 _uiState.value = LibraryUiState.Error(e.message ?: "Failed to load media")
             }
@@ -86,6 +106,6 @@ class LibraryViewModel @Inject constructor(
 
 sealed class LibraryUiState {
     object Loading : LibraryUiState()
-    data class Success(val folders: List<MediaFolder>) : LibraryUiState()
+    data class Success(val folders: List<MediaFolder>, val items: List<MediaSource> = emptyList()) : LibraryUiState()
     data class Error(val message: String) : LibraryUiState()
 }

@@ -1,6 +1,7 @@
 package com.streamcast.feature.library.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import com.streamcast.core.player.MediaSource
 import com.streamcast.feature.library.viewmodel.LibraryViewModel
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -10,6 +11,9 @@ fun VideoScreen(
     onVideoClick: (MediaSource, List<MediaSource>) -> Unit,
     viewModel: LibraryViewModel = hiltViewModel()
 ) {
+    LaunchedEffect(Unit) {
+        viewModel.setMediaType("video")
+    }
     // Reuse LibraryScreen logic but filtered for video
     LibraryScreen(onVideoClick = onVideoClick, viewModel = viewModel)
 }

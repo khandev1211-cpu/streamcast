@@ -45,6 +45,7 @@ fun LibraryScreen(
     
     var isGridView by remember { mutableStateOf(false) } // Default to list view as per ref
     val currentFolder = folderStack.lastOrNull()
+    val mediaType by viewModel.mediaType.collectAsState()
 
     BackHandler(enabled = folderStack.isNotEmpty()) {
         viewModel.navigateBack()
@@ -55,7 +56,7 @@ fun LibraryScreen(
             TopAppBar(
                 title = { 
                     Text(
-                        text = currentFolder?.name ?: if (isHierarchical) "Folders" else "Local",
+                        text = currentFolder?.name ?: if (isHierarchical) "Folders" else if (mediaType == "video") "Local" else "Music",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -78,8 +79,11 @@ fun LibraryScreen(
                     IconButton(onClick = { /* Search */ }) {
                         Icon(Icons.Default.Search, contentDescription = "Search")
                     }
-                    IconButton(onClick = { isGridView = !isGridView }) {
-                        Icon(if (isGridView) Icons.Default.List else Icons.Default.GridView, contentDescription = "Toggle View")
+                    IconButton(onClick = { isGridView = true }) {
+                        Icon(Icons.Default.GridView, contentDescription = "Grid View", tint = if (isGridView) MaterialTheme.colorScheme.primary else LocalContentColor.current)
+                    }
+                    IconButton(onClick = { isGridView = false }) {
+                        Icon(Icons.Default.ViewList, contentDescription = "List View", tint = if (!isGridView) MaterialTheme.colorScheme.primary else LocalContentColor.current)
                     }
                 }
             )
@@ -120,22 +124,28 @@ fun LibraryScreen(
                             state.folders
                         }
 
-                    if (isGridView) {
-                        MediaGridContent(
-                            folders = foldersToShow,
-                            mediaItems = currentFolder?.items ?: emptyList(),
-                            onFolderClick = { viewModel.navigateInto(it) },
-                            onMediaClick = { onVideoClick(it, currentFolder?.items ?: emptyList()) }
-                        )
-                    } else {
-                        MediaListContent(
-                            folders = foldersToShow,
-                            mediaItems = currentFolder?.items ?: emptyList(),
-                            onFolderClick = { viewModel.navigateInto(it) },
-                            onMediaClick = { onVideoClick(it, currentFolder?.items ?: emptyList()) },
-                            onConvertClick = { viewModel.convertToAudio(it) }
-                        )
-                    }
+                        val itemsToShow = if (!isHierarchical) {
+                            currentFolder?.items ?: emptyList()
+                        } else {
+                            state.items
+                        }
+
+                        if (isGridView) {
+                            MediaGridContent(
+                                folders = foldersToShow,
+                                mediaItems = itemsToShow,
+                                onFolderClick = { viewModel.navigateInto(it) },
+                                onMediaClick = { onVideoClick(it, itemsToShow) }
+                            )
+                        } else {
+                            MediaListContent(
+                                folders = foldersToShow,
+                                mediaItems = itemsToShow,
+                                onFolderClick = { viewModel.navigateInto(it) },
+                                onMediaClick = { onVideoClick(it, itemsToShow) },
+                                onConvertClick = { viewModel.convertToAudio(it) }
+                            )
+                        }
                     }
                     is LibraryUiState.Error -> {
                         Text(text = "Error: ${state.message}", color = MaterialTheme.colorScheme.error, modifier = Modifier.align(Alignment.Center))
