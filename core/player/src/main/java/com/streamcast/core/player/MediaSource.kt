@@ -28,5 +28,7 @@ data class SourceMetadata(
     val description: String? = null,
     val duration: Long? = null,
     val thumbnailUrl: String? = null,
+    val artist: String? = null,
+    val album: String? = null,
     val extras: Map<String, String> = emptyMap()
 )

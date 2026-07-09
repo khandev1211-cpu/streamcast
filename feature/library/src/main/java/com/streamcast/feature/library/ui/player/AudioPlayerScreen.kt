@@ -19,6 +19,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
 import com.streamcast.core.player.MediaSource
 import com.streamcast.core.player.PlaybackState
 import com.streamcast.feature.library.viewmodel.PlayerViewModel
@@ -77,7 +78,7 @@ fun AudioPlayerScreen(
 
             Spacer(modifier = Modifier.height(48.dp))
 
-            // Album Art Placeholder
+            // Album Art
             Surface(
                 modifier = Modifier
                     .size(300.dp)
@@ -86,12 +87,22 @@ fun AudioPlayerScreen(
                 tonalElevation = 8.dp
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        Icons.Default.MusicNote,
-                        contentDescription = null,
-                        tint = Color.White.copy(alpha = 0.5f),
-                        modifier = Modifier.size(120.dp)
-                    )
+                    val albumArtUrl = mediaSource.metadata?.thumbnailUrl
+                    if (albumArtUrl != null) {
+                        AsyncImage(
+                            model = albumArtUrl,
+                            contentDescription = "Album Art",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                        )
+                    } else {
+                        Icon(
+                            Icons.Default.MusicNote,
+                            contentDescription = null,
+                            tint = Color.White.copy(alpha = 0.5f),
+                            modifier = Modifier.size(120.dp)
+                        )
+                    }
                 }
             }
 
@@ -108,9 +119,15 @@ fun AudioPlayerScreen(
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                text = "Local Audio",
+                text = mediaSource.metadata?.artist ?: "Unknown Artist",
                 color = Color.White.copy(alpha = 0.6f),
                 style = MaterialTheme.typography.bodyLarge,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = mediaSource.metadata?.album ?: "Unknown Album",
+                color = Color.White.copy(alpha = 0.4f),
+                style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center
             )
 

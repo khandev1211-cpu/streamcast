@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
@@ -76,19 +77,23 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.padding(innerPadding)
                     ) {
                         composable(MainScreen.Local.route) {
+                            val playerViewModel: com.streamcast.feature.library.viewmodel.PlayerViewModel = hiltViewModel()
                             LocalScreen(
                                 onMediaClick = { media: MediaSource, playlist: List<MediaSource> ->
                                     val encodedUri = Uri.encode(media.uri.toString())
-                                    // In a real app we'd pass the playlist or use a shared VM.
-                                    // For now, we'll just navigate.
+                                    val index = playlist.indexOf(media)
+                                    playerViewModel.playPlaylist(playlist, if (index != -1) index else 0)
                                     navController.navigate("player/$encodedUri/${media.displayName}")
                                 }
                             )
                         }
                         composable(MainScreen.Music.route) {
+                            val playerViewModel: com.streamcast.feature.library.viewmodel.PlayerViewModel = hiltViewModel()
                             MusicScreen(
                                 onMediaClick = { media: MediaSource, playlist: List<MediaSource> ->
                                     val encodedUri = Uri.encode(media.uri.toString())
+                                    val index = playlist.indexOf(media)
+                                    playerViewModel.playPlaylist(playlist, if (index != -1) index else 0)
                                     navController.navigate("audio-player/$encodedUri/${media.displayName}")
                                 }
                             )

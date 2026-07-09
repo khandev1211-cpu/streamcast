@@ -30,30 +30,80 @@ class LibraryRepository @Inject constructor(
         
         // Scan Videos
         if (mediaType == "video" || mediaType == "all") {
-            val videoProjection = arrayOf(MediaStore.Video.Media._ID, MediaStore.Video.Media.DISPLAY_NAME, MediaStore.Video.Media.DATA)
+            val videoProjection = arrayOf(
+                MediaStore.Video.Media._ID,
+                MediaStore.Video.Media.DISPLAY_NAME,
+                MediaStore.Video.Media.DATA,
+                MediaStore.Video.Media.DURATION
+            )
             context.contentResolver.query(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, videoProjection, null, null, null)?.use { cursor ->
                 val idCol = cursor.getColumnIndexOrThrow(MediaStore.Video.Media._ID)
                 val nameCol = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DISPLAY_NAME)
                 val dataCol = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DATA)
+                val durationCol = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DURATION)
                 while (cursor.moveToNext()) {
                     val path = cursor.getString(dataCol)
-                    val uri = ContentUris.withAppendedId(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, cursor.getLong(idCol))
-                    allMedia.add(path to MediaSource(cursor.getLong(idCol).toString(), uri, SourceType.LOCAL, cursor.getString(nameCol), true))
+                    val id = cursor.getLong(idCol)
+                    val duration = cursor.getLong(durationCol)
+                    val uri = ContentUris.withAppendedId(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, id)
+                    allMedia.add(path to MediaSource(
+                        id = id.toString(),
+                        uri = uri,
+                        type = SourceType.LOCAL,
+                        displayName = cursor.getString(nameCol),
+                        isCacheable = true,
+                        metadata = com.streamcast.core.player.SourceMetadata(duration = duration)
+                    ))
                 }
             }
         }
 
         // Scan Audio
         if (mediaType == "audio" || mediaType == "all") {
-            val audioProjection = arrayOf(MediaStore.Audio.Media._ID, MediaStore.Audio.Media.DISPLAY_NAME, MediaStore.Audio.Media.DATA)
+            val audioProjection = arrayOf(
+                MediaStore.Audio.Media._ID,
+                MediaStore.Audio.Media.DISPLAY_NAME,
+                MediaStore.Audio.Media.DATA,
+                MediaStore.Audio.Media.ARTIST,
+                MediaStore.Audio.Media.ALBUM,
+                MediaStore.Audio.Media.DURATION,
+                MediaStore.Audio.Media.ALBUM_ID
+            )
             context.contentResolver.query(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, audioProjection, null, null, null)?.use { cursor ->
                 val idCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
                 val nameCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DISPLAY_NAME)
                 val dataCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
+                val artistCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
+                val albumCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
+                val durationCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
+                val albumIdCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
                 while (cursor.moveToNext()) {
                     val path = cursor.getString(dataCol)
-                    val uri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, cursor.getLong(idCol))
-                    allMedia.add(path to MediaSource(cursor.getLong(idCol).toString(), uri, SourceType.LOCAL, cursor.getString(nameCol), true))
+                    val id = cursor.getLong(idCol)
+                    val artist = cursor.getString(artistCol)
+                    val album = cursor.getString(albumCol)
+                    val duration = cursor.getLong(durationCol)
+                    val albumId = cursor.getLong(albumIdCol)
+                    
+                    val uri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id)
+                    val albumArtUri = ContentUris.withAppendedId(
+                        android.net.Uri.parse("content://media/external/audio/albumart"),
+                        albumId
+                    )
+                    
+                    allMedia.add(path to MediaSource(
+                        id = id.toString(),
+                        uri = uri,
+                        type = SourceType.LOCAL,
+                        displayName = cursor.getString(nameCol),
+                        isCacheable = true,
+                        metadata = com.streamcast.core.player.SourceMetadata(
+                            artist = artist,
+                            album = album,
+                            duration = duration,
+                            thumbnailUrl = albumArtUri.toString()
+                        )
+                    ))
                 }
             }
         }

@@ -134,6 +134,7 @@ fun LibraryScreen(
                             MediaGridContent(
                                 folders = foldersToShow,
                                 mediaItems = itemsToShow,
+                                mediaType = mediaType,
                                 onFolderClick = { viewModel.navigateInto(it) },
                                 onMediaClick = { onVideoClick(it, itemsToShow) }
                             )
@@ -141,6 +142,7 @@ fun LibraryScreen(
                             MediaListContent(
                                 folders = foldersToShow,
                                 mediaItems = itemsToShow,
+                                mediaType = mediaType,
                                 onFolderClick = { viewModel.navigateInto(it) },
                                 onMediaClick = { onVideoClick(it, itemsToShow) },
                                 onConvertClick = { viewModel.convertToAudio(it) }
@@ -160,6 +162,7 @@ fun LibraryScreen(
 fun MediaGridContent(
     folders: List<MediaFolder>,
     mediaItems: List<MediaSource>,
+    mediaType: String,
     onFolderClick: (MediaFolder) -> Unit,
     onMediaClick: (MediaSource) -> Unit
 ) {
@@ -180,10 +183,10 @@ fun MediaGridContent(
         
         if (mediaItems.isNotEmpty()) {
             item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
-                Text("Videos", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp))
+                Text(if (mediaType == "video") "Videos" else "Tracks", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp))
             }
             items(mediaItems) { media ->
-                MediaGridItem(media = media, onClick = { onMediaClick(media) })
+                MediaGridItem(media = media, mediaType = mediaType, onClick = { onMediaClick(media) })
             }
         }
     }
@@ -193,6 +196,7 @@ fun MediaGridContent(
 fun MediaListContent(
     folders: List<MediaFolder>,
     mediaItems: List<MediaSource>,
+    mediaType: String,
     onFolderClick: (MediaFolder) -> Unit,
     onMediaClick: (MediaSource) -> Unit,
     onConvertClick: (MediaSource) -> Unit
@@ -205,7 +209,7 @@ fun MediaListContent(
             items(folders) { folder ->
                 ListItem(
                     headlineContent = { Text(folder.name, fontWeight = FontWeight.Bold) },
-                    supportingContent = { Text("${folder.mediaCount} folders · 0 GB") }, // Placeholder size
+                    supportingContent = { Text("${folder.mediaCount} files") },
                     leadingContent = { Icon(Icons.Default.Folder, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(40.dp)) },
                     modifier = Modifier.clickable { onFolderClick(folder) }
                 )
@@ -214,31 +218,49 @@ fun MediaListContent(
         
         if (mediaItems.isNotEmpty()) {
             item {
-                Text("Videos", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(16.dp))
+                Text(if (mediaType == "video") "Videos" else "Tracks", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(16.dp))
             }
             items(mediaItems) { media ->
-                val isVideo = true // Assuming videos in this sub-tab
+                val isVideo = mediaType == "video"
                 ListItem(
                     headlineContent = { Text(media.displayName, maxLines = 2, overflow = TextOverflow.Ellipsis) },
-                    supportingContent = { Text("5.3 MB · 22 Jun") }, // Placeholder metadata
+                    supportingContent = { 
+                        if (isVideo) {
+                            Text(formatTime(media.metadata?.duration ?: 0))
+                        } else {
+                            Text("${media.metadata?.artist ?: "Unknown Artist"} • ${formatTime(media.metadata?.duration ?: 0)}")
+                        }
+                    },
                     leadingContent = {
                         Box(
-                            modifier = Modifier.size(80.dp, 56.dp)
+                            modifier = Modifier.size(if (isVideo) 80.dp else 56.dp, 56.dp)
                         ) {
                             Surface(
                                 modifier = Modifier.fillMaxSize(),
                                 shape = MaterialTheme.shapes.small,
                                 color = MaterialTheme.colorScheme.surfaceVariant
                             ) {
-                                AsyncImage(model = media.uri, contentDescription = null, contentScale = ContentScale.Crop)
+                                if (isVideo || media.metadata?.thumbnailUrl != null) {
+                                    AsyncImage(
+                                        model = media.metadata?.thumbnailUrl ?: media.uri, 
+                                        contentDescription = null, 
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } else {
+                                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                        Icon(Icons.Default.MusicNote, contentDescription = null)
+                                    }
+                                }
                             }
-                            // Duration badge
-                            Surface(
-                                color = Color.Black.copy(alpha = 0.6f),
-                                shape = MaterialTheme.shapes.extraSmall,
-                                modifier = Modifier.align(Alignment.BottomStart).padding(4.dp)
-                            ) {
-                                Text("01:18", color = Color.White, fontSize = 8.sp, modifier = Modifier.padding(horizontal = 2.dp))
+                            if (isVideo) {
+                                // Duration badge
+                                Surface(
+                                    color = Color.Black.copy(alpha = 0.6f),
+                                    shape = MaterialTheme.shapes.extraSmall,
+                                    modifier = Modifier.align(Alignment.BottomStart).padding(4.dp)
+                                ) {
+                                    Text(formatTime(media.metadata?.duration ?: 0), color = Color.White, fontSize = 8.sp, modifier = Modifier.padding(horizontal = 2.dp))
+                                }
                             }
                         }
                     },
@@ -290,8 +312,8 @@ fun FolderItemGrid(folder: MediaFolder, onClick: () -> Unit) {
 }
 
 @Composable
-fun MediaGridItem(media: MediaSource, onClick: () -> Unit) {
-    val isVideo = media.uri.toString().contains("video")
+fun MediaGridItem(media: MediaSource, mediaType: String, onClick: () -> Unit) {
+    val isVideo = mediaType == "video"
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -299,14 +321,24 @@ fun MediaGridItem(media: MediaSource, onClick: () -> Unit) {
     ) {
         Box(
             modifier = Modifier
-                .aspectRatio(16/9f)
+                .aspectRatio(if (isVideo) 16/9f else 1f)
                 .clip(MaterialTheme.shapes.small)
                 .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
-            if (isVideo) {
-                AsyncImage(model = media.uri, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            if (isVideo || media.metadata?.thumbnailUrl != null) {
+                AsyncImage(model = media.metadata?.thumbnailUrl ?: media.uri, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
             } else {
-                Icon(Icons.Default.MusicNote, contentDescription = null, modifier = Modifier.align(Alignment.Center))
+                Icon(Icons.Default.MusicNote, contentDescription = null, modifier = Modifier.align(Alignment.Center).size(48.dp))
+            }
+            
+            if (isVideo) {
+                 Surface(
+                    color = Color.Black.copy(alpha = 0.6f),
+                    shape = MaterialTheme.shapes.extraSmall,
+                    modifier = Modifier.align(Alignment.BottomStart).padding(4.dp)
+                ) {
+                    Text(formatTime(media.metadata?.duration ?: 0), color = Color.White, fontSize = 8.sp, modifier = Modifier.padding(horizontal = 2.dp))
+                }
             }
         }
         Spacer(modifier = Modifier.height(4.dp))
@@ -316,5 +348,21 @@ fun MediaGridItem(media: MediaSource, onClick: () -> Unit) {
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
+        if (!isVideo) {
+            Text(
+                text = media.metadata?.artist ?: "Unknown Artist",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1
+            )
+        }
     }
+}
+
+fun formatTime(ms: Long): String {
+    val totalSeconds = Math.abs(ms) / 1000
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    val sign = if (ms < 0) "-" else ""
+    return "$sign%02d:%02d".format(minutes, seconds)
 }
