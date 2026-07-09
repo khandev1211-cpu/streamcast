@@ -83,17 +83,24 @@ fun IptvScreen(
                                     headlineContent = { Text(channel.name) },
                                     supportingContent = { Text(channel.category ?: "No category") },
                                     modifier = Modifier.clickable { 
-                                        onChannelClick(
-                                            MediaSource(
-                                                id = channel.id,
-                                                uri = android.net.Uri.parse(channel.streamUrl),
-                                                type = SourceType.IPTV,
-                                                displayName = channel.name,
-                                                isCacheable = false
-                                            ),
-                                            emptyList()
-                                        )
-                                    }
+                                val mediaList = channels.map {
+                                    MediaSource(
+                                        id = it.id,
+                                        uri = android.net.Uri.parse(it.streamUrl),
+                                        type = SourceType.IPTV,
+                                        displayName = it.name,
+                                        isCacheable = false
+                                    )
+                                }
+                                val currentMedia = MediaSource(
+                                    id = channel.id,
+                                    uri = android.net.Uri.parse(channel.streamUrl),
+                                    type = SourceType.IPTV,
+                                    displayName = channel.name,
+                                    isCacheable = false
+                                )
+                                onChannelClick(currentMedia, mediaList)
+                            }
                                 )
                             }
                         }
