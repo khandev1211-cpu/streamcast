@@ -101,10 +101,10 @@ fun IptvScreen(
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
             when (selectedTabIndex) {
                 0 -> {
-                    if (searchQuery.isNotEmpty()) {
-                        // Search Mode
+                    if (searchQuery.isNotEmpty() || selectedCategory != null) {
+                        // Channel List Mode (Search or Selected Category)
                         ChannelList(channels = filteredChannels, onChannelClick = onChannelClick)
-                    } else if (selectedCategory == null || selectedCategory == "All") {
+                    } else {
                         // Folder View Mode
                         if (categoryFolders.isEmpty()) {
                             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -134,9 +134,6 @@ fun IptvScreen(
                                 }
                             }
                         }
-                    } else {
-                        // Channels in specific category
-                        ChannelList(channels = filteredChannels, onChannelClick = onChannelClick)
                     }
                 }
                 1 -> {

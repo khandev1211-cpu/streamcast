@@ -29,7 +29,7 @@ class IptvViewModel @Inject constructor(
     private val _searchQuery = MutableStateFlow("")
     val searchQuery = _searchQuery.asStateFlow()
 
-    private val _selectedCategory = MutableStateFlow<String?>("All")
+    private val _selectedCategory = MutableStateFlow<String?>(null)
     val selectedCategory = _selectedCategory.asStateFlow()
 
     private val allChannels = repository.getAllChannels()
