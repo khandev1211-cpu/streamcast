@@ -18,7 +18,7 @@ import com.streamcast.core.database.entities.SubtitleCache
         Channel::class,
         SubtitleCache::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
