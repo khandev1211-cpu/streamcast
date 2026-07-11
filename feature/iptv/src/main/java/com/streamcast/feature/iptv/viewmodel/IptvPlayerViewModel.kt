@@ -5,16 +5,21 @@ import androidx.lifecycle.viewModelScope
 import com.streamcast.core.player.MediaSource
 import com.streamcast.core.player.PlaybackState
 import com.streamcast.core.player.PlayerManager
+import com.streamcast.feature.iptv.data.IptvPlaylistManager
+import com.streamcast.feature.iptv.data.IptvRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class IptvPlayerViewModel @Inject constructor(
-    private val playerManager: PlayerManager
+    private val playerManager: PlayerManager,
+    private val playlistManager: IptvPlaylistManager,
+    private val repository: IptvRepository
 ) : ViewModel() {
 
     val playbackState = playerManager.playbackState
@@ -24,7 +29,12 @@ class IptvPlayerViewModel @Inject constructor(
     val currentChannel: StateFlow<MediaSource?> = _currentChannel.asStateFlow()
 
     private val _channels = MutableStateFlow<List<MediaSource>>(emptyList())
+    val channels: StateFlow<List<MediaSource>> = _channels.asStateFlow()
+
     private var currentIndex = -1
+
+    private val _isFavorite = MutableStateFlow(false)
+    val isFavorite: StateFlow<Boolean> = _isFavorite.asStateFlow()
 
     private val _resizeMode = MutableStateFlow(0) // 0: Fit, 1: Fill, 2: Stretch, 3: Zoom
     val resizeMode: StateFlow<Int> = _resizeMode.asStateFlow()
@@ -51,11 +61,30 @@ class IptvPlayerViewModel @Inject constructor(
         _autoSkipEnabled.value = !_autoSkipEnabled.value
     }
 
-    fun playChannel(mediaSource: MediaSource, playlist: List<MediaSource>) {
+    fun playChannel(mediaSource: MediaSource) {
+        val playlist = playlistManager.getPlaylist()
         _currentChannel.value = mediaSource
         _channels.value = playlist
         currentIndex = playlist.indexOfFirst { it.id == mediaSource.id }
         playerManager.play(mediaSource)
+        checkFavoriteStatus(mediaSource.id)
+    }
+
+    private fun checkFavoriteStatus(channelId: String) {
+        viewModelScope.launch {
+            val allChannels = repository.getAllChannels().first()
+            val channel = allChannels.find { it.id == channelId }
+            _isFavorite.value = channel?.isFavorite ?: false
+        }
+    }
+
+    fun toggleFavorite() {
+        val channel = _currentChannel.value ?: return
+        viewModelScope.launch {
+            val newStatus = !_isFavorite.value
+            repository.updateFavorite(channel.id, newStatus)
+            _isFavorite.value = newStatus
+        }
     }
 
     fun zapUp() {

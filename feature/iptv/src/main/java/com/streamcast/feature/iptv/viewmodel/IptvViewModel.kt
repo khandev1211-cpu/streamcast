@@ -4,6 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.streamcast.core.database.entities.Channel
 import com.streamcast.core.database.entities.IptvSource
+import com.streamcast.core.player.MediaSource
+import com.streamcast.core.player.SourceType
+import com.streamcast.feature.iptv.data.IptvPlaylistManager
 import com.streamcast.feature.iptv.data.IptvRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
@@ -20,7 +23,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class IptvViewModel @Inject constructor(
-    private val repository: IptvRepository
+    private val repository: IptvRepository,
+    private val playlistManager: IptvPlaylistManager
 ) : ViewModel() {
 
     val sources: StateFlow<List<IptvSource>> = repository.getSources()
@@ -137,6 +141,20 @@ class IptvViewModel @Inject constructor(
 
     fun onCategorySelected(category: String?) {
         _selectedCategory.value = category
+    }
+
+    fun preparePlaylist(channels: List<Channel>) {
+        val mediaList = channels.map {
+            MediaSource(
+                id = it.id,
+                uri = android.net.Uri.parse(it.streamUrl),
+                type = SourceType.IPTV,
+                displayName = it.name,
+                isCacheable = false,
+                headers = it.headers
+            )
+        }
+        playlistManager.setPlaylist(mediaList)
     }
 }
 

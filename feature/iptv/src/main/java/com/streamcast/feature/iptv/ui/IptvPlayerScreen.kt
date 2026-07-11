@@ -7,9 +7,12 @@ import androidx.annotation.OptIn
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -22,6 +25,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -33,12 +37,12 @@ import com.streamcast.core.player.MediaSource
 import com.streamcast.core.player.PlaybackState
 import com.streamcast.feature.iptv.viewmodel.IptvPlayerViewModel
 import kotlinx.coroutines.delay
+import kotlin.math.roundToInt
 
 @OptIn(UnstableApi::class)
 @Composable
 fun IptvPlayerScreen(
     mediaSource: MediaSource,
-    playlist: List<MediaSource>,
     onBack: () -> Unit = {},
     viewModel: IptvPlayerViewModel = hiltViewModel()
 ) {
@@ -48,12 +52,15 @@ fun IptvPlayerScreen(
     val playbackState by viewModel.playbackState.collectAsState()
     val player by viewModel.player.collectAsState()
     val currentChannel by viewModel.currentChannel.collectAsState()
+    val channels by viewModel.channels.collectAsState()
+    val isFavorite by viewModel.isFavorite.collectAsState()
     val resizeModeVm by viewModel.resizeMode.collectAsState()
     val autoSkip by viewModel.autoSkipEnabled.collectAsState()
     
     var showControls by remember { mutableStateOf(true) }
     var showOverflowGrid by remember { mutableStateOf(false) }
     var showStreamInfo by remember { mutableStateOf(false) }
+    var showSideList by remember { mutableStateOf(false) }
     
     val mxBlue = Color(0xFF00A0E9)
 
@@ -66,11 +73,11 @@ fun IptvPlayerScreen(
     }
 
     LaunchedEffect(mediaSource) {
-        viewModel.playChannel(mediaSource, playlist)
+        viewModel.playChannel(mediaSource)
     }
 
     LaunchedEffect(showControls) {
-        if (showControls) {
+        if (showControls && !showSideList && !showOverflowGrid) {
             delay(5000)
             showControls = false
         }
@@ -81,7 +88,21 @@ fun IptvPlayerScreen(
             .fillMaxSize()
             .background(Color.Black)
             .pointerInput(Unit) {
-                detectTapGestures(onTap = { showControls = !showControls })
+                detectTapGestures(onTap = { 
+                    if (showSideList) showSideList = false
+                    else showControls = !showControls 
+                })
+            }
+            .pointerInput(Unit) {
+                detectDragGestures(
+                    onDragEnd = { /* Handle zap if distance high? */ },
+                    onDrag = { change, dragAmount ->
+                        if (dragAmount.x < -20 && !showSideList) {
+                            showSideList = true
+                            showControls = false
+                        }
+                    }
+                )
             }
     ) {
         AndroidView(
@@ -127,13 +148,11 @@ fun IptvPlayerScreen(
                     )
                     Spacer(Modifier.height(24.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = { viewModel.playChannel(mediaSource, playlist) }) {
+                        Button(onClick = { viewModel.playChannel(mediaSource) }) {
                             Text("Retry")
                         }
-                        if (playlist.isNotEmpty()) {
-                            Button(onClick = { viewModel.zapUp() }) {
-                                Text("Next Channel")
-                            }
+                        Button(onClick = { viewModel.zapUp() }) {
+                            Text("Next Channel")
                         }
                     }
                     TextButton(onClick = onBack) {
@@ -151,14 +170,35 @@ fun IptvPlayerScreen(
             IptvControlsOverlay(
                 currentChannel = currentChannel ?: mediaSource,
                 playbackState = playbackState,
+                isFavorite = isFavorite,
                 onBack = onBack,
                 onZapUp = { viewModel.zapUp() },
                 onZapDown = { viewModel.zapDown() },
                 onShowSettings = { showOverflowGrid = true },
+                onToggleFavorite = { viewModel.toggleFavorite() },
+                onShowList = { showSideList = true },
                 onPlayPause = {
                     if (playbackState is PlaybackState.Playing) viewModel.pause()
                     else viewModel.resume()
                 }
+            )
+        }
+
+        // Side Channel List
+        AnimatedVisibility(
+            visible = showSideList,
+            enter = slideInHorizontally(initialOffsetX = { it }),
+            exit = slideOutHorizontally(targetOffsetX = { it }),
+            modifier = Modifier.align(Alignment.CenterEnd)
+        ) {
+            SideChannelList(
+                channels = channels,
+                currentChannelId = currentChannel?.id ?: "",
+                onChannelSelect = {
+                    viewModel.playChannel(it)
+                    showSideList = false
+                },
+                onDismiss = { showSideList = false }
             )
         }
 
@@ -178,6 +218,57 @@ fun IptvPlayerScreen(
                 playbackState = playbackState,
                 onDismiss = { showStreamInfo = false }
             )
+        }
+    }
+}
+
+@Composable
+fun SideChannelList(
+    channels: List<MediaSource>,
+    currentChannelId: String,
+    onChannelSelect: (MediaSource) -> Unit,
+    onDismiss: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxHeight()
+            .width(300.dp),
+        color = Color.Black.copy(alpha = 0.8f),
+        tonalElevation = 8.dp
+    ) {
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Channels", color = Color.White, style = MaterialTheme.typography.titleLarge)
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Default.Close, contentDescription = null, tint = Color.White)
+                }
+            }
+            
+            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                items(channels) { channel ->
+                    val isSelected = channel.id == currentChannelId
+                    ListItem(
+                        headlineContent = { 
+                            Text(
+                                channel.displayName, 
+                                color = if (isSelected) Color(0xFF00A0E9) else Color.White,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            ) 
+                        },
+                        supportingContent = { Text(channel.metadata?.description ?: "", color = Color.Gray, fontSize = 10.sp, maxLines = 1) },
+                        leadingContent = {
+                            if (isSelected) Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color(0xFF00A0E9))
+                            else Icon(Icons.Default.Tv, contentDescription = null, tint = Color.Gray)
+                        },
+                        modifier = Modifier.clickable { onChannelSelect(channel) },
+                        colors = ListItemDefaults.colors(containerColor = if (isSelected) Color.White.copy(alpha = 0.1f) else Color.Transparent)
+                    )
+                }
+            }
         }
     }
 }
@@ -302,10 +393,13 @@ fun IptvOverflowMenu(
 fun IptvControlsOverlay(
     currentChannel: MediaSource,
     playbackState: PlaybackState,
+    isFavorite: Boolean,
     onBack: () -> Unit,
     onZapUp: () -> Unit,
     onZapDown: () -> Unit,
     onShowSettings: () -> Unit,
+    onToggleFavorite: () -> Unit,
+    onShowList: () -> Unit,
     onPlayPause: () -> Unit
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
@@ -337,6 +431,17 @@ fun IptvControlsOverlay(
                     Spacer(Modifier.width(4.dp))
                     Text("LIVE", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 }
+            }
+            
+            IconButton(onClick = onToggleFavorite) {
+                Icon(
+                    if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                    contentDescription = "Favorite",
+                    tint = if (isFavorite) Color.Red else Color.White
+                )
+            }
+            IconButton(onClick = onShowList) {
+                Icon(Icons.Default.FormatListBulleted, contentDescription = "Channel List", tint = Color.White)
             }
             IconButton(onClick = onShowSettings) {
                 Icon(Icons.Default.MoreVert, contentDescription = "Settings", tint = Color.White)

@@ -25,6 +25,10 @@ class IptvRepository @Inject constructor(
 
     fun getAllChannels(): Flow<List<Channel>> = channelDao.getAllChannels()
 
+    suspend fun updateFavorite(channelId: String, isFavorite: Boolean) {
+        channelDao.updateFavorite(channelId, isFavorite)
+    }
+
     suspend fun addSource(source: IptvSource) {
         sourceDao.upsert(source)
     }

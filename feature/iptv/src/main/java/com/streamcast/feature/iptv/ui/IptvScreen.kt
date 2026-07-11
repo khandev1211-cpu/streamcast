@@ -103,7 +103,7 @@ fun IptvScreen(
                 0 -> {
                     if (searchQuery.isNotEmpty() || selectedCategory != null) {
                         // Channel List Mode (Search or Selected Category)
-                        ChannelList(channels = filteredChannels, onChannelClick = onChannelClick)
+                        ChannelList(channels = filteredChannels, onChannelClick = onChannelClick, viewModel = viewModel)
                     } else {
                         // Folder View Mode
                         if (categoryFolders.isEmpty()) {
@@ -195,22 +195,13 @@ fun CategoryFolderItem(name: String, count: Int, onClick: () -> Unit) {
 }
 
 @Composable
-fun ChannelList(channels: List<Channel>, onChannelClick: (MediaSource, List<MediaSource>) -> Unit) {
+fun ChannelList(channels: List<Channel>, onChannelClick: (MediaSource, List<MediaSource>) -> Unit, viewModel: IptvViewModel) {
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         items(channels) { channel ->
             ChannelItem(
                 channel = channel,
                 onClick = { 
-                    val mediaList = channels.map {
-                        MediaSource(
-                            id = it.id,
-                            uri = android.net.Uri.parse(it.streamUrl),
-                            type = SourceType.IPTV,
-                            displayName = it.name,
-                            isCacheable = false,
-                            headers = it.headers
-                        )
-                    }
+                    viewModel.preparePlaylist(channels)
                     val currentMedia = MediaSource(
                         id = channel.id,
                         uri = android.net.Uri.parse(channel.streamUrl),
@@ -219,7 +210,7 @@ fun ChannelList(channels: List<Channel>, onChannelClick: (MediaSource, List<Medi
                         isCacheable = false,
                         headers = channel.headers
                     )
-                    onChannelClick(currentMedia, mediaList)
+                    onChannelClick(currentMedia, emptyList())
                 }
             )
         }

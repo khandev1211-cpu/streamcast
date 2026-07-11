@@ -19,4 +19,7 @@ interface ChannelDao {
 
     @Upsert
     suspend fun upsertAll(channels: List<Channel>)
+
+    @Query("UPDATE Channel SET isFavorite = :isFavorite WHERE id = :id")
+    suspend fun updateFavorite(id: String, isFavorite: Boolean)
 }

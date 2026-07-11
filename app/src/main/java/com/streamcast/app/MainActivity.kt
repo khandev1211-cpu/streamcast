@@ -82,9 +82,10 @@ class MainActivity : ComponentActivity() {
                             LocalScreen(
                                 onMediaClick = { media: MediaSource, playlist: List<MediaSource> ->
                                     val encodedUri = Uri.encode(media.uri.toString())
+                                    val encodedName = Uri.encode(media.displayName)
                                     val index = playlist.indexOf(media)
                                     playerViewModel.playPlaylist(playlist, if (index != -1) index else 0)
-                                    navController.navigate("player/$encodedUri/${media.displayName}")
+                                    navController.navigate("player/$encodedUri/$encodedName")
                                 }
                             )
                         }
@@ -93,9 +94,10 @@ class MainActivity : ComponentActivity() {
                             MusicScreen(
                                 onMediaClick = { media: MediaSource, playlist: List<MediaSource> ->
                                     val encodedUri = Uri.encode(media.uri.toString())
+                                    val encodedName = Uri.encode(media.displayName)
                                     val index = playlist.indexOf(media)
                                     playerViewModel.playPlaylist(playlist, if (index != -1) index else 0)
-                                    navController.navigate("audio-player/$encodedUri/${media.displayName}")
+                                    navController.navigate("audio-player/$encodedUri/$encodedName")
                                 }
                             )
                         }
@@ -103,7 +105,8 @@ class MainActivity : ComponentActivity() {
                             IptvScreen(
                                 onChannelClick = { media: MediaSource, playlist: List<MediaSource> ->
                                     val encodedUri = Uri.encode(media.uri.toString())
-                                    navController.navigate("iptv-player/$encodedUri/${media.displayName}")
+                                    val encodedName = Uri.encode(media.displayName)
+                                    navController.navigate("iptv-player/$encodedUri/$encodedName")
                                 }
                             )
                         }
@@ -173,7 +176,6 @@ class MainActivity : ComponentActivity() {
                             )
                             IptvPlayerScreen(
                                 mediaSource = mediaSource,
-                                playlist = emptyList(), // TODO: Pass real playlist
                                 onBack = { navController.popBackStack() }
                             )
                         }

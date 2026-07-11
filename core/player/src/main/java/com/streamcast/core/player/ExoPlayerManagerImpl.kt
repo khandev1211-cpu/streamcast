@@ -56,11 +56,9 @@ class ExoPlayerManagerImpl @Inject constructor(
             // Custom DataSource.Factory to handle per-stream headers
             val dataSourceFactory = androidx.media3.datasource.DataSource.Factory {
                 val dataSource = baseHttpFactory.createDataSource()
-                // Find the source that matched the current playing item to get its headers
-                val mediaItem = exoPlayer?.currentMediaItem
-                val source = mediaItem?.localConfiguration?.tag as? MediaSource
-                
-                source?.headers?.forEach { (key, value) ->
+                // We access the headers from currentMediaSource which is updated on the main thread
+                // during playback transitions.
+                currentMediaSource?.headers?.forEach { (key, value) ->
                     dataSource.setRequestProperty(key, value)
                 }
                 dataSource
@@ -92,6 +90,7 @@ class ExoPlayerManagerImpl @Inject constructor(
     override fun playPlaylist(sources: List<MediaSource>, startIndex: Int) {
         android.util.Log.d("ExoPlayerManager", "Playing playlist with ${sources.size} items at index $startIndex")
         val player = ensurePlayer()
+        currentMediaSource = sources[startIndex]
         player.clearMediaItems()
         val mediaItems = sources.map { source ->
             android.util.Log.d("ExoPlayerManager", "Adding MediaItem: ${source.uri}")
@@ -118,8 +117,6 @@ class ExoPlayerManagerImpl @Inject constructor(
         player.setMediaItems(mediaItems, startIndex, C.TIME_UNSET)
         player.prepare()
         player.play()
-        
-        currentMediaSource = sources[startIndex]
 
         val intent = Intent(context, PlaybackService::class.java)
         context.startService(intent)
