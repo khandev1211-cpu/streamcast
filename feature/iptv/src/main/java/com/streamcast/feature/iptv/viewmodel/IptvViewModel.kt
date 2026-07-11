@@ -58,6 +58,17 @@ class IptvViewModel @Inject constructor(
         groups.map { (name, list) -> IptvCategory(name, list.size) }.sortedBy { it.name }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    private fun startBackgroundHealthChecks() {
+        viewModelScope.launch {
+            allChannels.collect { channels ->
+                // Check channels with unknown status, 5 at a time to be polite
+                channels.filter { it.lastCheckStatus == 0 }.take(5).forEach { 
+                    repository.checkChannelHealth(it)
+                }
+            }
+        }
+    }
+
     private val _uiState = MutableStateFlow<IptvUiState>(IptvUiState.Idle)
     val uiState: StateFlow<IptvUiState> = _uiState.asStateFlow()
 
@@ -69,6 +80,7 @@ class IptvViewModel @Inject constructor(
                 }
             }
         }
+        startBackgroundHealthChecks()
     }
 
     private suspend fun preloadDefaults() {

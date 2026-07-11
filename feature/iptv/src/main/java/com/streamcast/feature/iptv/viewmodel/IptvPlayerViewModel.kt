@@ -45,6 +45,8 @@ class IptvPlayerViewModel @Inject constructor(
     private val _autoSkipEnabled = MutableStateFlow(true)
     val autoSkipEnabled = _autoSkipEnabled.asStateFlow()
 
+    private val sessionBlacklist = mutableSetOf<String>()
+
     init {
         monitorPlaybackErrors()
     }
@@ -53,6 +55,7 @@ class IptvPlayerViewModel @Inject constructor(
         viewModelScope.launch {
             playbackState.collect { state ->
                 if (state is PlaybackState.Error && _autoSkipEnabled.value) {
+                    _currentChannel.value?.id?.let { sessionBlacklist.add(it) }
                     kotlinx.coroutines.delay(2000) // Wait 2s to show error before skipping
                     zapUp()
                 }
@@ -113,8 +116,12 @@ class IptvPlayerViewModel @Inject constructor(
         if (currentIndex < _channels.value.size - 1) {
             currentIndex++
             val next = _channels.value[currentIndex]
+            if (sessionBlacklist.contains(next.id) && currentIndex < _channels.value.size - 1) {
+                zapUp() // Recursively skip blacklisted
+                return
+            }
             _currentChannel.value = next
-            playerManager.play(next)
+            playChannel(next)
         }
     }
 
@@ -122,8 +129,12 @@ class IptvPlayerViewModel @Inject constructor(
         if (currentIndex > 0) {
             currentIndex--
             val prev = _channels.value[currentIndex]
+            if (sessionBlacklist.contains(prev.id) && currentIndex > 0) {
+                zapDown()
+                return
+            }
             _currentChannel.value = prev
-            playerManager.play(prev)
+            playChannel(prev)
         }
     }
 
