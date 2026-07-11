@@ -43,6 +43,10 @@ class IptvRepository @Inject constructor(
         sourceDao.upsert(source)
     }
 
+    suspend fun addChannel(channel: Channel) {
+        channelDao.upsertAll(listOf(channel))
+    }
+
     suspend fun refreshSource(sourceId: String) {
         val source = sourceDao.getById(sourceId) ?: return
         when (source.type) {

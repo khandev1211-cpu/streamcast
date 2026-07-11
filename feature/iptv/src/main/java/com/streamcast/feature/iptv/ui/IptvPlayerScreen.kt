@@ -12,10 +12,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -69,6 +72,7 @@ fun IptvPlayerScreen(
     val currentChannel by viewModel.currentChannel.collectAsState()
     val channels by viewModel.channels.collectAsState()
     val isFavorite by viewModel.isFavorite.collectAsState()
+    val currentEpg by viewModel.currentEpg.collectAsState()
     val resizeModeVm by viewModel.resizeMode.collectAsState()
     val autoSkip by viewModel.autoSkipEnabled.collectAsState()
     val uaProfile by viewModel.userAgentProfile.collectAsState()
@@ -77,6 +81,9 @@ fun IptvPlayerScreen(
     var showOverflowGrid by remember { mutableStateOf(false) }
     var showStreamInfo by remember { mutableStateOf(false) }
     var showSideList by remember { mutableStateOf(false) }
+
+    var gestureType by remember { mutableStateOf("") } 
+    var gestureProgress by remember { mutableStateOf(0f) }
     
     val mxBlue = Color(0xFF00A0E9)
 
@@ -120,6 +127,27 @@ fun IptvPlayerScreen(
                     }
                 )
             }
+            .pointerInput(Unit) {
+                detectVerticalDragGestures(
+                    onDragStart = { offset ->
+                        gestureType = if (offset.x < size.width / 2) "Brightness" else "Volume"
+                    },
+                    onDragEnd = { gestureType = "" },
+                    onVerticalDrag = { _, dragAmount ->
+                        val delta = -dragAmount / 500f
+                        gestureProgress = (gestureProgress + delta).coerceIn(0f, 1f)
+                        if (gestureType == "Volume") {
+                            viewModel.setVolume(gestureProgress * 2.0f)
+                        } else if (gestureType == "Brightness") {
+                            activity?.window?.let { window ->
+                                val params = window.attributes
+                                params.screenBrightness = gestureProgress
+                                window.attributes = params
+                            }
+                        }
+                    }
+                )
+            }
     ) {
         AndroidView(
             factory = { ctx ->
@@ -137,6 +165,10 @@ fun IptvPlayerScreen(
             },
             modifier = Modifier.fillMaxSize()
         )
+
+        if (gestureType.isNotEmpty()) {
+            GestureIndicator(type = gestureType, progress = gestureProgress)
+        }
 
         // Loading Spinner
         if (playbackState is PlaybackState.Buffering) {
@@ -190,6 +222,7 @@ fun IptvPlayerScreen(
                 currentChannel = currentChannel ?: mediaSource,
                 playbackState = playbackState,
                 isFavorite = isFavorite,
+                currentEpg = currentEpg,
                 onBack = onBack,
                 onZapUp = { viewModel.zapUp() },
                 onZapDown = { viewModel.zapDown() },
@@ -421,6 +454,7 @@ fun IptvControlsOverlay(
     currentChannel: MediaSource,
     playbackState: PlaybackState,
     isFavorite: Boolean,
+    currentEpg: List<com.streamcast.core.database.entities.EpgProgram> = emptyList(),
     onBack: () -> Unit,
     onZapUp: () -> Unit,
     onZapDown: () -> Unit,
@@ -430,6 +464,7 @@ fun IptvControlsOverlay(
     onPlayPause: () -> Unit
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
+        // ... (top bar and center controls)
         // Top Bar
         Row(
             modifier = Modifier
@@ -499,7 +534,7 @@ fun IptvControlsOverlay(
             }
         }
 
-        // Bottom Info / EPG Placeholder
+        // Bottom Info / EPG
         Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -507,13 +542,34 @@ fun IptvControlsOverlay(
                 .background(Color.Black.copy(alpha = 0.5f))
                 .padding(16.dp)
         ) {
-            Text("Now: Loading program info...", color = Color.White, style = MaterialTheme.typography.bodyMedium)
-            LinearProgressIndicator(
-                progress = 0.3f, 
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                color = Color(0xFF00A0E9)
-            )
-            Text("Next: Up next program info", color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall)
+            val nowProgram = currentEpg.firstOrNull()
+            val nextProgram = if (currentEpg.size > 1) currentEpg[1] else null
+
+            if (nowProgram != null) {
+                Text("Now: ${nowProgram.title}", color = Color.White, style = MaterialTheme.typography.bodyMedium)
+                val total = nowProgram.endTime - nowProgram.startTime
+                val elapsed = System.currentTimeMillis() - nowProgram.startTime
+                val progress = if (total > 0) elapsed.toFloat() / total else 0f
+                
+                LinearProgressIndicator(
+                    progress = progress.coerceIn(0f, 1f), 
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    color = Color(0xFF00A0E9)
+                )
+            } else {
+                Text("Now: Loading program info...", color = Color.White, style = MaterialTheme.typography.bodyMedium)
+                LinearProgressIndicator(
+                    progress = 0.3f, 
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    color = Color(0xFF00A0E9)
+                )
+            }
+
+            if (nextProgram != null) {
+                Text("Next: ${nextProgram.title}", color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall)
+            } else {
+                Text("Next: Up next program info", color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall)
+            }
         }
     }
 }
@@ -524,4 +580,47 @@ fun formatTime(ms: Long): String {
     val seconds = totalSeconds % 60
     val sign = if (ms < 0) "-" else ""
     return "$sign%02d:%02d".format(minutes, seconds)
+}
+
+@Composable
+fun GestureIndicator(type: String, progress: Float) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .background(Color.Black.copy(alpha = 0.5f), shape = RoundedCornerShape(16.dp))
+                .padding(24.dp)
+        ) {
+            Icon(
+                imageVector = if (type == "Brightness") Icons.Default.BrightnessHigh else Icons.Default.VolumeUp,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(64.dp)
+            )
+            Spacer(Modifier.height(16.dp))
+            Text(
+                text = "${(progress * 100).toInt()}%",
+                color = Color.White,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.height(16.dp))
+            Box(
+                modifier = Modifier
+                    .width(120.dp)
+                    .height(4.dp)
+                    .background(Color.Gray.copy(alpha = 0.5f), shape = CircleShape)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(progress)
+                        .fillMaxHeight()
+                        .background(Color.White, shape = CircleShape)
+                )
+            }
+        }
+    }
 }

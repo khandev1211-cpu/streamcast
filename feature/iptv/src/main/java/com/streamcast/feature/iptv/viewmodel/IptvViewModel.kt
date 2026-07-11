@@ -3,6 +3,9 @@ package com.streamcast.feature.iptv.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.streamcast.core.database.entities.Channel
+import com.streamcast.core.database.dao.EpgDao
+import com.streamcast.core.database.entities.Channel
+import com.streamcast.core.database.entities.EpgProgram
 import com.streamcast.core.database.entities.IptvSource
 import com.streamcast.core.player.MediaSource
 import com.streamcast.core.player.SourceType
@@ -15,6 +18,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -24,8 +28,39 @@ import javax.inject.Inject
 @HiltViewModel
 class IptvViewModel @Inject constructor(
     private val repository: IptvRepository,
-    private val playlistManager: IptvPlaylistManager
+    private val playlistManager: IptvPlaylistManager,
+    private val epgDao: EpgDao
 ) : ViewModel() {
+
+    init {
+        generateMockEpg()
+    }
+
+    private fun generateMockEpg() {
+        viewModelScope.launch {
+            val currentTime = System.currentTimeMillis()
+            val mockPrograms = mutableListOf<EpgProgram>()
+            // Generate generic mock data for channels
+            // (Real implementation would sync from XMLTV/Xtream)
+            repository.getAllChannels().first().take(20).forEach { channel: Channel ->
+                 mockPrograms.add(EpgProgram(
+                    channelId = channel.id,
+                    title = "Current: ${channel.name} Special",
+                    description = "Watching live broadcast.",
+                    startTime = currentTime - 1800000,
+                    endTime = currentTime + 1800000
+                ))
+                mockPrograms.add(EpgProgram(
+                    channelId = channel.id,
+                    title = "Next: World News Tonight",
+                    description = "Evening report.",
+                    startTime = currentTime + 1800000,
+                    endTime = currentTime + 5400000
+                ))
+            }
+            epgDao.insertAll(mockPrograms)
+        }
+    }
 
     val sources: StateFlow<List<IptvSource>> = repository.getSources()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -56,6 +91,10 @@ class IptvViewModel @Inject constructor(
     val categoryFolders: StateFlow<List<IptvCategory>> = allChannels.map { channels ->
         val groups = channels.groupBy { it.category ?: "Uncategorized" }
         groups.map { (name, list) -> IptvCategory(name, list.size) }.sortedBy { it.name }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val userLiveChannels: StateFlow<List<Channel>> = allChannels.map { channels ->
+        channels.filter { it.sourceId == "user_live_streams" }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private fun startBackgroundHealthChecks() {
@@ -153,6 +192,37 @@ class IptvViewModel @Inject constructor(
 
     fun onCategorySelected(category: String?) {
         _selectedCategory.value = category
+    }
+
+    fun addLiveStream(name: String, url: String) {
+        viewModelScope.launch {
+            val sourceId = "user_live_streams"
+            // Ensure source exists
+            repository.addSource(
+                IptvSource(
+                    id = sourceId,
+                    name = "My Live Streams",
+                    type = "LIVE_URL",
+                    playlistUrl = null,
+                    host = null,
+                    username = null,
+                    password = null,
+                    lastSyncedAt = null
+                )
+            )
+            
+            val channel = Channel(
+                id = UUID.randomUUID().toString(),
+                sourceId = sourceId,
+                name = name,
+                logoUrl = null,
+                category = "Live",
+                country = "User",
+                streamUrl = url,
+                epgChannelId = null
+            )
+            repository.addChannel(channel)
+        }
     }
 
     fun preparePlaylist(channels: List<Channel>) {

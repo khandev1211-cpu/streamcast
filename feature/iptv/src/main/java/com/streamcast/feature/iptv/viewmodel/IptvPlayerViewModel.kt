@@ -2,6 +2,8 @@ package com.streamcast.feature.iptv.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.streamcast.core.database.dao.EpgDao
+import com.streamcast.core.database.entities.EpgProgram
 import com.streamcast.core.player.MediaSource
 import com.streamcast.core.player.PlaybackState
 import com.streamcast.core.player.PlayerManager
@@ -9,9 +11,13 @@ import com.streamcast.feature.iptv.data.IptvPlaylistManager
 import com.streamcast.feature.iptv.data.IptvRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -19,7 +25,8 @@ import javax.inject.Inject
 class IptvPlayerViewModel @Inject constructor(
     private val playerManager: PlayerManager,
     private val playlistManager: IptvPlaylistManager,
-    private val repository: IptvRepository
+    private val repository: IptvRepository,
+    private val epgDao: EpgDao
 ) : ViewModel() {
 
     val playbackState = playerManager.playbackState
@@ -27,6 +34,15 @@ class IptvPlayerViewModel @Inject constructor(
 
     private val _currentChannel = MutableStateFlow<MediaSource?>(null)
     val currentChannel: StateFlow<MediaSource?> = _currentChannel.asStateFlow()
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val currentEpg: StateFlow<List<EpgProgram>> = _currentChannel.flatMapLatest { channel ->
+        if (channel != null) {
+            epgDao.getCurrentAndNext(channel.id, System.currentTimeMillis())
+        } else {
+            flowOf(emptyList())
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _channels = MutableStateFlow<List<MediaSource>>(emptyList())
     val channels: StateFlow<List<MediaSource>> = _channels.asStateFlow()
@@ -140,6 +156,10 @@ class IptvPlayerViewModel @Inject constructor(
 
     fun toggleResizeMode() {
         _resizeMode.value = (_resizeMode.value + 1) % 4
+    }
+
+    fun setVolume(volume: Float) {
+        playerManager.setVolume(volume)
     }
 
     fun pause() = playerManager.pause()

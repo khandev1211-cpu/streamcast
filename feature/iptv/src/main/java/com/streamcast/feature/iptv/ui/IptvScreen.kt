@@ -38,6 +38,7 @@ fun IptvScreen(
     
     val categoryFolders by viewModel.categoryFolders.collectAsState()
     val filteredChannels by viewModel.filteredChannels.collectAsState()
+    val userLiveChannels by viewModel.userLiveChannels.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val selectedCategory by viewModel.selectedCategory.collectAsState()
 
@@ -137,11 +138,19 @@ fun IptvScreen(
                     }
                 }
                 1 -> {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(Icons.Default.LiveTv, contentDescription = null, modifier = Modifier.size(64.dp))
-                            Text("User-added Live URLs will appear here")
+                    if (userLiveChannels.isEmpty()) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(Icons.Default.LiveTv, contentDescription = null, modifier = Modifier.size(64.dp), tint = Color.Gray)
+                                Spacer(Modifier.height(16.dp))
+                                Text("No live streams added yet", color = Color.Gray)
+                                TextButton(onClick = { showAddSourceDialog = true }) {
+                                    Text("Add Your First Stream")
+                                }
+                            }
                         }
+                    } else {
+                        ChannelList(channels = userLiveChannels, onChannelClick = onChannelClick, viewModel = viewModel)
                     }
                 }
             }
@@ -149,14 +158,54 @@ fun IptvScreen(
     }
 
     if (showAddSourceDialog) {
-        AddSourceDialog(
-            onDismiss = { showAddSourceDialog = false },
-            onAdd = { name, host, user, pass ->
-                viewModel.addXtreamSource(name, host, user, pass)
-                showAddSourceDialog = false
-            }
-        )
+        if (selectedTabIndex == 0) {
+            AddSourceDialog(
+                onDismiss = { showAddSourceDialog = false },
+                onAdd = { name, host, user, pass ->
+                    viewModel.addXtreamSource(name, host, user, pass)
+                    showAddSourceDialog = false
+                }
+            )
+        } else {
+            AddLiveUrlDialog(
+                onDismiss = { showAddSourceDialog = false },
+                onAdd = { name, url ->
+                    viewModel.addLiveStream(name, url)
+                    showAddSourceDialog = false
+                }
+            )
+        }
     }
+}
+
+@Composable
+fun AddLiveUrlDialog(
+    onDismiss: () -> Unit,
+    onAdd: (String, String) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var url by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add Live Stream") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextField(value = name, onValueChange = { name = it }, label = { Text("Channel Name") })
+                TextField(value = url, onValueChange = { url = it }, label = { Text("Stream URL (.m3u8, .mpd)") })
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onAdd(name, url) }) {
+                Text("Add")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @Composable

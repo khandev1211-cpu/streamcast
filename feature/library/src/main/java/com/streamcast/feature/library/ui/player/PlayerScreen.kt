@@ -15,6 +15,8 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -516,36 +518,40 @@ fun SeekIndicator(target: Long) {
 @Composable
 fun GestureIndicator(type: String, progress: Float) {
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(48.dp),
-        contentAlignment = if (type == "Brightness") Alignment.CenterStart else Alignment.CenterEnd
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
-                .width(48.dp)
-                .background(Color.Black.copy(alpha = 0.5f), shape = MaterialTheme.shapes.medium)
-                .padding(vertical = 16.dp)
+                .background(Color.Black.copy(alpha = 0.5f), shape = RoundedCornerShape(16.dp))
+                .padding(24.dp)
         ) {
             Icon(
-                imageVector = if (type == "Brightness") Icons.Default.BrightnessMedium else Icons.Default.VolumeUp,
+                imageVector = if (type == "Brightness") Icons.Default.BrightnessHigh else Icons.Default.VolumeUp,
                 contentDescription = null,
-                tint = Color.White
+                tint = Color.White,
+                modifier = Modifier.size(64.dp)
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(16.dp))
+            Text(
+                text = "${(progress * 100).toInt()}%",
+                color = Color.White,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.height(16.dp))
             Box(
                 modifier = Modifier
-                    .width(4.dp)
-                    .height(150.dp)
-                    .background(Color.Gray.copy(alpha = 0.5f), shape = MaterialTheme.shapes.extraSmall)
+                    .width(120.dp)
+                    .height(4.dp)
+                    .background(Color.Gray.copy(alpha = 0.5f), shape = CircleShape)
             ) {
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .fillMaxHeight(progress)
-                        .align(Alignment.BottomCenter)
-                        .background(Color.White, shape = MaterialTheme.shapes.extraSmall)
+                        .fillMaxWidth(progress)
+                        .fillMaxHeight()
+                        .background(Color.White, shape = CircleShape)
                 )
             }
         }
