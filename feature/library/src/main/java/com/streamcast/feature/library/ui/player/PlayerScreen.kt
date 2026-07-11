@@ -212,6 +212,13 @@ fun PlayerScreen(
                 )
         )
 
+        // Loading Spinner
+        if (playbackState is PlaybackState.Buffering) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = mxBlue, modifier = Modifier.size(64.dp))
+            }
+        }
+
         if (gestureType.isNotEmpty()) {
             if (gestureType == "Seek") {
                 SeekIndicator(seekTarget)
