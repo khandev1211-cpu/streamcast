@@ -12,7 +12,8 @@ data class MediaSource(
     val type: SourceType,
     val displayName: String,
     val isCacheable: Boolean,
-    val metadata: SourceMetadata? = null
+    val metadata: SourceMetadata? = null,
+    val headers: Map<String, String>? = null
 )
 
 enum class SourceType {

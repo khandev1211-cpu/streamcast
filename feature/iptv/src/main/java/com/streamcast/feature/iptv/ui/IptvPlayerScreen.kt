@@ -124,8 +124,15 @@ fun IptvPlayerScreen(
                         modifier = Modifier.padding(horizontal = 32.dp)
                     )
                     Spacer(Modifier.height(24.dp))
-                    Button(onClick = { viewModel.playChannel(mediaSource, playlist) }) {
-                        Text("Retry")
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = { viewModel.playChannel(mediaSource, playlist) }) {
+                            Text("Retry")
+                        }
+                        if (playlist.isNotEmpty()) {
+                            Button(onClick = { viewModel.zapUp() }) {
+                                Text("Next Channel")
+                            }
+                        }
                     }
                     TextButton(onClick = onBack) {
                         Text("Back", color = Color.White)

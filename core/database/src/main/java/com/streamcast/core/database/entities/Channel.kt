@@ -21,5 +21,6 @@ data class Channel(
     val country: String?,
     val streamUrl: String,
     val epgChannelId: String?,
+    val headers: Map<String, String>? = null,
     val isFavorite: Boolean = false
 )

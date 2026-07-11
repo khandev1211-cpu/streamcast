@@ -115,7 +115,8 @@ fun IptvScreen(
                                                 uri = android.net.Uri.parse(it.streamUrl),
                                                 type = SourceType.IPTV,
                                                 displayName = it.name,
-                                                isCacheable = false
+                                                isCacheable = false,
+                                                headers = it.headers
                                             )
                                         }
                                         val currentMedia = MediaSource(
@@ -123,7 +124,8 @@ fun IptvScreen(
                                             uri = android.net.Uri.parse(channel.streamUrl),
                                             type = SourceType.IPTV,
                                             displayName = channel.name,
-                                            isCacheable = false
+                                            isCacheable = false,
+                                            headers = channel.headers
                                         )
                                         onChannelClick(currentMedia, mediaList)
                                     }

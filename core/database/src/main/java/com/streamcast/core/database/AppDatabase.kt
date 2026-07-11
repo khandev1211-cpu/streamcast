@@ -2,6 +2,7 @@ package com.streamcast.core.database
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 import com.streamcast.core.database.dao.ChannelDao
 import com.streamcast.core.database.dao.IptvSourceDao
 import com.streamcast.core.database.dao.LocalMediaDao
@@ -18,9 +19,10 @@ import com.streamcast.core.database.entities.SubtitleCache
         Channel::class,
         SubtitleCache::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
+@TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun channelDao(): ChannelDao
     abstract fun localMediaDao(): LocalMediaDao

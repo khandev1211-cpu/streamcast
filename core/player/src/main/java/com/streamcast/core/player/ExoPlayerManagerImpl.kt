@@ -49,12 +49,21 @@ class ExoPlayerManagerImpl @Inject constructor(
     @UnstableApi
     private fun ensurePlayer(): ExoPlayer {
         return exoPlayer ?: run {
-            val httpDataSourceFactory = DefaultHttpDataSource.Factory()
+            val baseHttpFactory = DefaultHttpDataSource.Factory()
                 .setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
                 .setAllowCrossProtocolRedirects(true)
 
+            // Custom DataSource.Factory to handle per-stream headers
+            val dataSourceFactory = androidx.media3.datasource.DataSource.Factory {
+                val dataSource = baseHttpFactory.createDataSource()
+                currentMediaSource?.headers?.forEach { (key, value) ->
+                    dataSource.setRequestProperty(key, value)
+                }
+                dataSource
+            }
+
             ExoPlayer.Builder(context)
-                .setMediaSourceFactory(DefaultMediaSourceFactory(context).setDataSourceFactory(httpDataSourceFactory))
+                .setMediaSourceFactory(DefaultMediaSourceFactory(context).setDataSourceFactory(dataSourceFactory))
                 .setAudioAttributes(
                     AudioAttributes.Builder()
                         .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
@@ -93,6 +102,12 @@ class ExoPlayerManagerImpl @Inject constructor(
                 uriString.contains(".m3u8") -> builder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_M3U8)
                 uriString.contains(".mpd") -> builder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_MPD)
             }
+            
+            // Set custom headers if provided by the source
+            // We'll pass them in the tag so the DataSourceFactory can extract them if needed,
+            // or we use RequestMetadata (some data sources support this)
+            // Builder doesn't have a direct setHeaders. 
+            // One way is using MediaItem.Builder.setMediaMetadata or setTag.
             
             builder.build()
         }
