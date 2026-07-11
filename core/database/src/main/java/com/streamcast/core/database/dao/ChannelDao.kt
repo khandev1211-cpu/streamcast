@@ -11,6 +11,9 @@ interface ChannelDao {
     @Query("SELECT * FROM Channel WHERE sourceId = :sourceId")
     fun getChannelsForSource(sourceId: String): Flow<List<Channel>>
 
+    @Query("SELECT * FROM Channel")
+    fun getAllChannels(): Flow<List<Channel>>
+
     @Query("SELECT * FROM Channel WHERE isFavorite = 1")
     fun getFavorites(): Flow<List<Channel>>
 

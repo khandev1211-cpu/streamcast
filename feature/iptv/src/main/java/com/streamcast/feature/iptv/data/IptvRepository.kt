@@ -23,6 +23,8 @@ class IptvRepository @Inject constructor(
     fun getChannelsForSource(sourceId: String): Flow<List<Channel>> = 
         channelDao.getChannelsForSource(sourceId)
 
+    fun getAllChannels(): Flow<List<Channel>> = channelDao.getAllChannels()
+
     suspend fun addSource(source: IptvSource) {
         sourceDao.upsert(source)
     }

@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -23,6 +25,32 @@ class IptvViewModel @Inject constructor(
 
     val sources: StateFlow<List<IptvSource>> = repository.getSources()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery = _searchQuery.asStateFlow()
+
+    private val _selectedCategory = MutableStateFlow<String?>("All")
+    val selectedCategory = _selectedCategory.asStateFlow()
+
+    private val allChannels = repository.getAllChannels()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val filteredChannels: StateFlow<List<Channel>> = combine(
+        allChannels,
+        _searchQuery,
+        _selectedCategory
+    ) { channels, query, category ->
+        channels.filter { channel ->
+            val matchesQuery = channel.name.contains(query, ignoreCase = true)
+            val matchesCategory = category == "All" || channel.category == category
+            matchesQuery && matchesCategory
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val categories: StateFlow<List<String>> = allChannels.map { channels ->
+        val list = channels.mapNotNull { it.category }.distinct().sorted()
+        listOf("All") + list
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), listOf("All"))
 
     private val _uiState = MutableStateFlow<IptvUiState>(IptvUiState.Idle)
     val uiState: StateFlow<IptvUiState> = _uiState.asStateFlow()
@@ -99,6 +127,14 @@ class IptvViewModel @Inject constructor(
                 _uiState.value = IptvUiState.Error(e.message ?: "Failed to import directory")
             }
         }
+    }
+
+    fun onSearchQueryChanged(query: String) {
+        _searchQuery.value = query
+    }
+
+    fun onCategorySelected(category: String?) {
+        _selectedCategory.value = category
     }
 }
 
