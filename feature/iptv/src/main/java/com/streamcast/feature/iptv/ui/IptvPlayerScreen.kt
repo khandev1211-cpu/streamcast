@@ -1,6 +1,9 @@
 package com.streamcast.feature.iptv.ui
 
 import android.app.Activity
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.annotation.OptIn
@@ -38,6 +41,18 @@ import com.streamcast.core.player.PlaybackState
 import com.streamcast.feature.iptv.viewmodel.IptvPlayerViewModel
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
+
+fun openExternalPlayer(context: Context, mediaSource: MediaSource) {
+    try {
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(Uri.parse(mediaSource.uri.toString()), "video/*")
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        context.startActivity(Intent.createChooser(intent, "Open with..."))
+    } catch (e: Exception) {
+        // Fallback or Toast
+    }
+}
 
 @OptIn(UnstableApi::class)
 @Composable
@@ -151,8 +166,11 @@ fun IptvPlayerScreen(
                         Button(onClick = { viewModel.playChannel(mediaSource) }) {
                             Text("Retry")
                         }
+                        Button(onClick = { openExternalPlayer(context, currentChannel ?: mediaSource) }) {
+                            Text("External")
+                        }
                         Button(onClick = { viewModel.zapUp() }) {
-                            Text("Next Channel")
+                            Text("Next")
                         }
                     }
                     TextButton(onClick = onBack) {
@@ -208,7 +226,8 @@ fun IptvPlayerScreen(
                 onToggleResize = { viewModel.toggleResizeMode() },
                 autoSkipEnabled = autoSkip,
                 onToggleAutoSkip = { viewModel.toggleAutoSkip() },
-                onStreamInfoClick = { showStreamInfo = true }
+                onStreamInfoClick = { showStreamInfo = true },
+                onExternalPlayerClick = { openExternalPlayer(context, currentChannel ?: mediaSource) }
             )
         }
 
@@ -315,7 +334,8 @@ fun IptvOverflowMenu(
     onToggleResize: () -> Unit,
     autoSkipEnabled: Boolean = true,
     onToggleAutoSkip: () -> Unit = {},
-    onStreamInfoClick: () -> Unit = {}
+    onStreamInfoClick: () -> Unit = {},
+    onExternalPlayerClick: () -> Unit = {}
 ) {
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -335,6 +355,7 @@ fun IptvOverflowMenu(
                     
                     val items = listOf(
                         "Aspect Ratio" to Icons.Default.AspectRatio to onToggleResize,
+                        "External Player" to Icons.Default.OpenInNew to onExternalPlayerClick,
                         "Stream Info" to Icons.Default.Info to onStreamInfoClick,
                         "Audio Tracks" to Icons.Default.MusicNote to {},
                         "Subtitles" to Icons.Default.Subtitles to {},

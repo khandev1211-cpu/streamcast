@@ -225,6 +225,21 @@ class ExoPlayerManagerImpl @Inject constructor(
     }
 
     override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-        _playbackState.value = PlaybackState.Error(error.message ?: "Unknown playback error")
+        val message = when (error.errorCode) {
+            androidx.media3.common.PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS -> {
+                val cause = error.cause as? androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException
+                when (cause?.responseCode) {
+                    403 -> "Geo-blocked: You might need a VPN for this channel."
+                    404 -> "Link Expired: The provider has moved this stream."
+                    500, 503 -> "Server Error: The provider's server is currently down."
+                    else -> "Network Error: ${cause?.responseCode ?: "Unknown status"}"
+                }
+            }
+            androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED -> "No Internet: Please check your connection."
+            androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT -> "Timeout: The stream server is taking too long to respond."
+            androidx.media3.common.PlaybackException.ERROR_CODE_DECODER_INIT_FAILED -> "Codec Error: This format is not supported by your device. Try an external player."
+            else -> error.message ?: "Unknown playback error"
+        }
+        _playbackState.value = PlaybackState.Error(message)
     }
 }
