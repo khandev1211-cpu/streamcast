@@ -39,6 +39,7 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.streamcast.core.player.MediaSource
 import com.streamcast.core.player.PlaybackState
+import com.streamcast.core.player.SourceType
 import com.streamcast.core.player.model.SubtitleSegment
 import com.streamcast.feature.library.viewmodel.PlayerViewModel
 import com.streamcast.feature.library.viewmodel.SubtitleUiState
@@ -216,6 +217,34 @@ fun PlayerScreen(
         if (playbackState is PlaybackState.Buffering) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = mxBlue, modifier = Modifier.size(64.dp))
+            }
+        }
+
+        // Error Message Overlay
+        if (playbackState is PlaybackState.Error) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.8f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(Icons.Default.Error, contentDescription = null, tint = Color.Red, modifier = Modifier.size(64.dp))
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        text = (playbackState as PlaybackState.Error).message,
+                        color = Color.White,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 32.dp)
+                    )
+                    Spacer(Modifier.height(24.dp))
+                    Button(onClick = { viewModel.play(mediaSource) }) {
+                        Text("Retry")
+                    }
+                    TextButton(onClick = onBack) {
+                        Text("Back", color = Color.White)
+                    }
+                }
             }
         }
 
