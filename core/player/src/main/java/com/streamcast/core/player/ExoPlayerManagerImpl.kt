@@ -64,14 +64,24 @@ class ExoPlayerManagerImpl @Inject constructor(
     }
 
     override fun playPlaylist(sources: List<MediaSource>, startIndex: Int) {
+        android.util.Log.d("ExoPlayerManager", "Playing playlist with ${sources.size} items at index $startIndex")
         val player = ensurePlayer()
         player.clearMediaItems()
-        val mediaItems = sources.map { 
-            MediaItem.Builder()
-                .setUri(it.uri)
-                .setMediaId(it.id)
-                .setTag(it)
-                .build()
+        val mediaItems = sources.map { source ->
+            android.util.Log.d("ExoPlayerManager", "Adding MediaItem: ${source.uri}")
+            val builder = MediaItem.Builder()
+                .setUri(source.uri)
+                .setMediaId(source.id)
+                .setTag(source)
+
+            // Explicitly set mime types for IPTV/Live if it's a known format
+            val uriString = source.uri.toString()
+            when {
+                uriString.contains(".m3u8") -> builder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_M3U8)
+                uriString.contains(".mpd") -> builder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_MPD)
+            }
+            
+            builder.build()
         }
         player.setMediaItems(mediaItems, startIndex, C.TIME_UNSET)
         player.prepare()

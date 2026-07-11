@@ -9,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -50,6 +51,8 @@ fun IptvPlayerScreen(
     val resizeModeVm by viewModel.resizeMode.collectAsState()
     
     var showControls by remember { mutableStateOf(true) }
+    var showOverflowGrid by remember { mutableStateOf(false) }
+    
     val mxBlue = Color(0xFF00A0E9)
 
     val currentResizeMode = when(resizeModeVm) {
@@ -142,12 +145,78 @@ fun IptvPlayerScreen(
                 onBack = onBack,
                 onZapUp = { viewModel.zapUp() },
                 onZapDown = { viewModel.zapDown() },
-                onToggleResize = { viewModel.toggleResizeMode() },
+                onShowSettings = { showOverflowGrid = true },
                 onPlayPause = {
                     if (playbackState is PlaybackState.Playing) viewModel.pause()
                     else viewModel.resume()
                 }
             )
+        }
+
+        if (showOverflowGrid) {
+            IptvOverflowMenu(
+                onDismiss = { showOverflowGrid = false },
+                onToggleResize = { viewModel.toggleResizeMode() }
+            )
+        }
+    }
+}
+
+@Composable
+fun IptvOverflowMenu(
+    onDismiss: () -> Unit,
+    onToggleResize: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = Color.Black.copy(alpha = 0.7f)
+    ) {
+        Box(modifier = Modifier.fillMaxSize().clickable { onDismiss() }) {
+            Card(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(16.dp)
+                    .width(280.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF2C2C2E))
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("IPTV Settings", color = Color.White, style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(16.dp))
+                    
+                    val items = listOf(
+                        "Aspect Ratio" to Icons.Default.AspectRatio to onToggleResize,
+                        "Audio Tracks" to Icons.Default.MusicNote to {},
+                        "Subtitles" to Icons.Default.Subtitles to {},
+                        "Refresh EPG" to Icons.Default.Refresh to {},
+                        "Stream Info" to Icons.Default.Info to {},
+                        "Add to Favourites" to Icons.Default.Favorite to {},
+                        "Sleep Timer" to Icons.Default.Timer to {},
+                        "Full Settings" to Icons.Default.Settings to {}
+                    )
+
+                    androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                        columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(4),
+                        modifier = Modifier.height(200.dp)
+                    ) {
+                        items(items) { item ->
+                            val (pair, onClick) = item
+                            val (label, icon) = pair
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier
+                                    .padding(vertical = 8.dp)
+                                    .clickable { 
+                                        onClick()
+                                        onDismiss()
+                                    }
+                            ) {
+                                Icon(icon, contentDescription = label, tint = Color.White, modifier = Modifier.size(24.dp))
+                                Text(label, color = Color.White, fontSize = 9.sp, textAlign = TextAlign.Center, maxLines = 1)
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -159,7 +228,7 @@ fun IptvControlsOverlay(
     onBack: () -> Unit,
     onZapUp: () -> Unit,
     onZapDown: () -> Unit,
-    onToggleResize: () -> Unit,
+    onShowSettings: () -> Unit,
     onPlayPause: () -> Unit
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
@@ -192,8 +261,8 @@ fun IptvControlsOverlay(
                     Text("LIVE", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 }
             }
-            IconButton(onClick = onToggleResize) {
-                Icon(Icons.Default.AspectRatio, contentDescription = "Resize", tint = Color.White)
+            IconButton(onClick = onShowSettings) {
+                Icon(Icons.Default.MoreVert, contentDescription = "Settings", tint = Color.White)
             }
         }
 
@@ -238,4 +307,12 @@ fun IptvControlsOverlay(
             Text("Next: Up next program info", color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall)
         }
     }
+}
+
+fun formatTime(ms: Long): String {
+    val totalSeconds = Math.abs(ms) / 1000
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    val sign = if (ms < 0) "-" else ""
+    return "$sign%02d:%02d".format(minutes, seconds)
 }
