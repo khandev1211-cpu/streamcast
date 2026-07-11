@@ -177,13 +177,15 @@ fun PlayerScreen(
                 detectHorizontalDragGestures(
                     onDragStart = { gestureType = "Seek"; seekTarget = currentPos },
                     onDragEnd = { 
-                        viewModel.seekTo(seekTarget)
+                        if (duration > 0) viewModel.seekTo(seekTarget)
                         gestureType = "" 
                     },
                     onHorizontalDrag = { _, dragAmount ->
-                        val delta = (dragAmount * 200).toLong()
-                        seekTarget = (seekTarget + delta).coerceIn(0L, duration)
-                        gestureProgress = if (duration > 0) seekTarget.toFloat() / duration else 0f
+                        if (duration > 0) {
+                            val delta = (dragAmount * 200).toLong()
+                            seekTarget = (seekTarget + delta).coerceIn(0L, duration)
+                            gestureProgress = seekTarget.toFloat() / duration
+                        }
                     }
                 )
             }
