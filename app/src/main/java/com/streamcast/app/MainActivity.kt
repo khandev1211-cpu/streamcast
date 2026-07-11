@@ -29,6 +29,7 @@ import com.streamcast.core.player.SourceType
 import com.streamcast.feature.library.ui.LocalScreen
 import com.streamcast.feature.library.ui.MusicScreen
 import com.streamcast.feature.iptv.ui.IptvScreen
+import com.streamcast.feature.iptv.ui.IptvPlayerScreen
 import com.streamcast.feature.library.ui.MeScreen
 import com.streamcast.feature.library.ui.player.AudioPlayerScreen
 import com.streamcast.feature.library.ui.player.PlayerScreen
@@ -102,7 +103,7 @@ class MainActivity : ComponentActivity() {
                             IptvScreen(
                                 onChannelClick = { media: MediaSource, playlist: List<MediaSource> ->
                                     val encodedUri = Uri.encode(media.uri.toString())
-                                    navController.navigate("player/$encodedUri/${media.displayName}")
+                                    navController.navigate("iptv-player/$encodedUri/${media.displayName}")
                                 }
                             )
                         }
@@ -150,6 +151,29 @@ class MainActivity : ComponentActivity() {
                             )
                             AudioPlayerScreen(
                                 mediaSource = mediaSource,
+                                onBack = { navController.popBackStack() }
+                            )
+                        }
+                        composable(
+                            route = "iptv-player/{uri}/{name}",
+                            arguments = listOf(
+                                navArgument("uri") { type = NavType.StringType },
+                                navArgument("name") { type = NavType.StringType }
+                            )
+                        ) { backStackEntry ->
+                            val uri = Uri.parse(Uri.decode(backStackEntry.arguments?.getString("uri")))
+                            val name = backStackEntry.arguments?.getString("name") ?: "Channel"
+                            
+                            val mediaSource = MediaSource(
+                                id = uri.toString(),
+                                uri = uri,
+                                type = SourceType.IPTV,
+                                displayName = name,
+                                isCacheable = false
+                            )
+                            IptvPlayerScreen(
+                                mediaSource = mediaSource,
+                                playlist = emptyList(), // TODO: Pass real playlist
                                 onBack = { navController.popBackStack() }
                             )
                         }
