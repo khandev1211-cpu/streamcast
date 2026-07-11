@@ -23,5 +23,6 @@ data class Channel(
     val epgChannelId: String?,
     val headers: Map<String, String>? = null,
     val isFavorite: Boolean = false,
-    val lastCheckStatus: Int = 0 // 0: Unknown, 1: Online, 2: Offline
+    val lastCheckStatus: Int = 0, // 0: Unknown, 1: Online, 2: Offline
+    val lastPlayedAt: Long? = null
 )

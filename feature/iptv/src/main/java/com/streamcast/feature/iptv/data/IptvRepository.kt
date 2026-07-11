@@ -25,8 +25,16 @@ class IptvRepository @Inject constructor(
 
     fun getAllChannels(): Flow<List<Channel>> = channelDao.getAllChannels()
 
+    fun getFavorites(): Flow<List<Channel>> = channelDao.getFavorites()
+    
+    fun getRecents(): Flow<List<Channel>> = channelDao.getRecents()
+
     suspend fun updateFavorite(channelId: String, isFavorite: Boolean) {
         channelDao.updateFavorite(channelId, isFavorite)
+    }
+
+    suspend fun updateLastPlayed(channelId: String) {
+        channelDao.updateLastPlayed(channelId, System.currentTimeMillis())
     }
 
     suspend fun checkChannelHealth(channel: Channel) {
@@ -51,25 +59,70 @@ class IptvRepository @Inject constructor(
         val source = sourceDao.getById(sourceId) ?: return
         when (source.type) {
             "XTREAM" -> {
-                val categories = apiClient.getLiveCategories(source.username!!, source.password!!)
+                val username = source.username!!
+                val password = source.password!!
                 val channels = mutableListOf<Channel>()
-                categories.forEach { category ->
-                    val streams = apiClient.getLiveStreams(source.username!!, source.password!!, categoryId = category.category_id)
+
+                // 1. Refresh Live TV
+                val liveCategories = apiClient.getLiveCategories(username, password)
+                liveCategories.forEach { category ->
+                    val streams = apiClient.getLiveStreams(username, password, categoryId = category.category_id)
                     streams.forEach { stream ->
                         channels.add(
                             Channel(
-                                id = "${source.id}_${stream.stream_id}",
+                                id = "${source.id}_live_${stream.stream_id}",
                                 sourceId = source.id,
                                 name = stream.name,
                                 logoUrl = stream.stream_icon,
                                 category = category.category_name,
                                 country = null,
-                                streamUrl = "${source.host}/live/${source.username}/${source.password}/${stream.stream_id}.m3u8",
+                                streamUrl = "${source.host}/live/$username/$password/${stream.stream_id}.m3u8",
                                 epgChannelId = null
                             )
                         )
                     }
                 }
+
+                // 2. Refresh VOD (Movies)
+                val vodCategories = apiClient.getVodCategories(username, password)
+                vodCategories.forEach { category ->
+                    val streams = apiClient.getVodStreams(username, password, categoryId = category.category_id)
+                    streams.forEach { stream ->
+                        channels.add(
+                            Channel(
+                                id = "${source.id}_vod_${stream.stream_id}",
+                                sourceId = source.id,
+                                name = stream.name,
+                                logoUrl = stream.stream_icon,
+                                category = "Movies: ${category.category_name}",
+                                country = null,
+                                streamUrl = "${source.host}/movie/$username/$password/${stream.stream_id}.mp4", // Typical Xtream VOD format
+                                epgChannelId = null
+                            )
+                        )
+                    }
+                }
+
+                // 3. Refresh Series
+                val seriesCategories = apiClient.getSeriesCategories(username, password)
+                seriesCategories.forEach { category ->
+                    val seriesList = apiClient.getSeries(username, password, categoryId = category.category_id)
+                    seriesList.forEach { s ->
+                        channels.add(
+                            Channel(
+                                id = "${source.id}_series_${s.stream_id}",
+                                sourceId = source.id,
+                                name = s.name,
+                                logoUrl = s.stream_icon,
+                                category = "Series: ${category.category_name}",
+                                country = null,
+                                streamUrl = "${source.host}/series/$username/$password/${s.stream_id}.m3u8", // Series usually points to episodes/m3u8
+                                epgChannelId = null
+                            )
+                        )
+                    }
+                }
+
                 channelDao.upsertAll(channels)
             }
             "M3U_LOCAL" -> {

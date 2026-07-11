@@ -47,6 +47,9 @@ class IptvPlayerViewModel @Inject constructor(
     private val _channels = MutableStateFlow<List<MediaSource>>(emptyList())
     val channels: StateFlow<List<MediaSource>> = _channels.asStateFlow()
 
+    val channelStatuses = repository.getAllChannels()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     private var currentIndex = -1
 
     private val _isFavorite = MutableStateFlow(false)
@@ -109,6 +112,10 @@ class IptvPlayerViewModel @Inject constructor(
         currentIndex = playlist.indexOfFirst { it.id == mediaSource.id }
         playerManager.play(sourceWithHeaders)
         checkFavoriteStatus(mediaSource.id)
+        
+        viewModelScope.launch {
+            repository.updateLastPlayed(mediaSource.id)
+        }
     }
 
     private fun checkFavoriteStatus(channelId: String) {

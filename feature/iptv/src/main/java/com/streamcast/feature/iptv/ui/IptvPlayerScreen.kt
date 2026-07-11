@@ -39,6 +39,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
+import com.streamcast.core.database.entities.Channel
 import com.streamcast.core.player.MediaSource
 import com.streamcast.core.player.PlaybackState
 import com.streamcast.feature.iptv.viewmodel.IptvPlayerViewModel
@@ -71,6 +72,7 @@ fun IptvPlayerScreen(
     val player by viewModel.player.collectAsState()
     val currentChannel by viewModel.currentChannel.collectAsState()
     val channels by viewModel.channels.collectAsState()
+    val channelStatuses by viewModel.channelStatuses.collectAsState()
     val isFavorite by viewModel.isFavorite.collectAsState()
     val currentEpg by viewModel.currentEpg.collectAsState()
     val resizeModeVm by viewModel.resizeMode.collectAsState()
@@ -97,6 +99,7 @@ fun IptvPlayerScreen(
 
     LaunchedEffect(mediaSource) {
         viewModel.playChannel(mediaSource)
+        // We'll mark as played via a separate ViewModel call or shared logic
     }
 
     LaunchedEffect(showControls) {
@@ -245,6 +248,7 @@ fun IptvPlayerScreen(
         ) {
             SideChannelList(
                 channels = channels,
+                statuses = channelStatuses,
                 currentChannelId = currentChannel?.id ?: "",
                 onChannelSelect = {
                     viewModel.playChannel(it)
@@ -280,6 +284,7 @@ fun IptvPlayerScreen(
 @Composable
 fun SideChannelList(
     channels: List<MediaSource>,
+    statuses: List<Channel>,
     currentChannelId: String,
     onChannelSelect: (MediaSource) -> Unit,
     onDismiss: () -> Unit
@@ -306,13 +311,28 @@ fun SideChannelList(
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 items(channels) { channel ->
                     val isSelected = channel.id == currentChannelId
+                    val status = statuses.find { it.id == channel.id }?.lastCheckStatus ?: 0
+                    val statusColor = when(status) {
+                        1 -> Color.Green
+                        2 -> Color.Red
+                        else -> Color.Gray
+                    }
+                    
                     ListItem(
                         headlineContent = { 
-                            Text(
-                                channel.displayName, 
-                                color = if (isSelected) Color(0xFF00A0E9) else Color.White,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                            ) 
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    channel.displayName, 
+                                    color = if (isSelected) Color(0xFF00A0E9) else Color.White,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    modifier = Modifier.weight(1f)
+                                ) 
+                                Box(
+                                    modifier = Modifier
+                                        .size(6.dp)
+                                        .background(statusColor, shape = CircleShape)
+                                )
+                            }
                         },
                         supportingContent = { Text(channel.metadata?.description ?: "", color = Color.Gray, fontSize = 10.sp, maxLines = 1) },
                         leadingContent = {

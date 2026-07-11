@@ -22,6 +22,36 @@ interface IptvApiClient {
         @Query("action") action: String = "get_live_streams",
         @Query("category_id") categoryId: String? = null
     ): List<XtreamStreamResponse>
+
+    @GET("player_api.php")
+    suspend fun getVodCategories(
+        @Query("username") username: String,
+        @Query("password") password: String,
+        @Query("action") action: String = "get_vod_categories"
+    ): List<XtreamCategoryResponse>
+
+    @GET("player_api.php")
+    suspend fun getVodStreams(
+        @Query("username") username: String,
+        @Query("password") password: String,
+        @Query("action") action: String = "get_vod_streams",
+        @Query("category_id") categoryId: String? = null
+    ): List<XtreamStreamResponse>
+
+    @GET("player_api.php")
+    suspend fun getSeriesCategories(
+        @Query("username") username: String,
+        @Query("password") password: String,
+        @Query("action") action: String = "get_series_categories"
+    ): List<XtreamCategoryResponse>
+
+    @GET("player_api.php")
+    suspend fun getSeries(
+        @Query("username") username: String,
+        @Query("password") password: String,
+        @Query("action") action: String = "get_series",
+        @Query("category_id") categoryId: String? = null
+    ): List<XtreamStreamResponse>
 }
 
 data class XtreamCategoryResponse(

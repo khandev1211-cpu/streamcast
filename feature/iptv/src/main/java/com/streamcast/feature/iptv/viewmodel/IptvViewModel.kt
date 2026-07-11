@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.streamcast.core.database.entities.Channel
 import com.streamcast.core.database.dao.EpgDao
-import com.streamcast.core.database.entities.Channel
 import com.streamcast.core.database.entities.EpgProgram
 import com.streamcast.core.database.entities.IptvSource
 import com.streamcast.core.player.MediaSource
@@ -92,6 +91,26 @@ class IptvViewModel @Inject constructor(
         val groups = channels.groupBy { it.category ?: "Uncategorized" }
         groups.map { (name, list) -> IptvCategory(name, list.size) }.sortedBy { it.name }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val liveFolders = categoryFolders.map { list ->
+        list.filter { !it.name.startsWith("Movies:") && !it.name.startsWith("Series:") }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val movieFolders = categoryFolders.map { list ->
+        list.filter { it.name.startsWith("Movies:") }
+            .map { it.copy(name = it.name.removePrefix("Movies: ")) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val seriesFolders = categoryFolders.map { list ->
+        list.filter { it.name.startsWith("Series:") }
+            .map { it.copy(name = it.name.removePrefix("Series: ")) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val favoriteChannels = repository.getFavorites()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val recentChannels = repository.getRecents()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val userLiveChannels: StateFlow<List<Channel>> = allChannels.map { channels ->
         channels.filter { it.sourceId == "user_live_streams" }
@@ -192,6 +211,12 @@ class IptvViewModel @Inject constructor(
 
     fun onCategorySelected(category: String?) {
         _selectedCategory.value = category
+    }
+
+    fun markAsPlayed(channelId: String) {
+        viewModelScope.launch {
+            repository.updateLastPlayed(channelId)
+        }
     }
 
     fun addLiveStream(name: String, url: String) {
