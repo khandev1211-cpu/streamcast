@@ -49,9 +49,11 @@ fun IptvPlayerScreen(
     val player by viewModel.player.collectAsState()
     val currentChannel by viewModel.currentChannel.collectAsState()
     val resizeModeVm by viewModel.resizeMode.collectAsState()
+    val autoSkip by viewModel.autoSkipEnabled.collectAsState()
     
     var showControls by remember { mutableStateOf(true) }
     var showOverflowGrid by remember { mutableStateOf(false) }
+    var showStreamInfo by remember { mutableStateOf(false) }
     
     val mxBlue = Color(0xFF00A0E9)
 
@@ -163,16 +165,66 @@ fun IptvPlayerScreen(
         if (showOverflowGrid) {
             IptvOverflowMenu(
                 onDismiss = { showOverflowGrid = false },
-                onToggleResize = { viewModel.toggleResizeMode() }
+                onToggleResize = { viewModel.toggleResizeMode() },
+                autoSkipEnabled = autoSkip,
+                onToggleAutoSkip = { viewModel.toggleAutoSkip() },
+                onStreamInfoClick = { showStreamInfo = true }
+            )
+        }
+
+        if (showStreamInfo) {
+            StreamInfoDialog(
+                mediaSource = currentChannel ?: mediaSource,
+                playbackState = playbackState,
+                onDismiss = { showStreamInfo = false }
             )
         }
     }
 }
 
 @Composable
+fun StreamInfoDialog(
+    mediaSource: MediaSource,
+    playbackState: PlaybackState,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Stream Diagnostics") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                DiagnosticRow("Channel", mediaSource.displayName)
+                DiagnosticRow("URL", mediaSource.uri.toString())
+                DiagnosticRow("Status", when(playbackState) {
+                    is PlaybackState.Playing -> "Active (Playing)"
+                    is PlaybackState.Buffering -> "Buffering..."
+                    is PlaybackState.Error -> "Error: ${playbackState.message}"
+                    else -> "Idle"
+                })
+                mediaSource.headers?.let { headers ->
+                    DiagnosticRow("Headers", headers.entries.joinToString("\n") { "${it.key}: ${it.value}" })
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } }
+    )
+}
+
+@Composable
+fun DiagnosticRow(label: String, value: String) {
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+        Text(label, style = MaterialTheme.typography.labelSmall, color = Color(0xFF00A0E9))
+        Text(value, style = MaterialTheme.typography.bodySmall, color = Color.White)
+    }
+}
+
+@Composable
 fun IptvOverflowMenu(
     onDismiss: () -> Unit,
-    onToggleResize: () -> Unit
+    onToggleResize: () -> Unit,
+    autoSkipEnabled: Boolean = true,
+    onToggleAutoSkip: () -> Unit = {},
+    onStreamInfoClick: () -> Unit = {}
 ) {
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -192,10 +244,10 @@ fun IptvOverflowMenu(
                     
                     val items = listOf(
                         "Aspect Ratio" to Icons.Default.AspectRatio to onToggleResize,
+                        "Stream Info" to Icons.Default.Info to onStreamInfoClick,
                         "Audio Tracks" to Icons.Default.MusicNote to {},
                         "Subtitles" to Icons.Default.Subtitles to {},
                         "Refresh EPG" to Icons.Default.Refresh to {},
-                        "Stream Info" to Icons.Default.Info to {},
                         "Add to Favourites" to Icons.Default.Favorite to {},
                         "Sleep Timer" to Icons.Default.Timer to {},
                         "Full Settings" to Icons.Default.Settings to {}
@@ -221,6 +273,24 @@ fun IptvOverflowMenu(
                                 Text(label, color = Color.White, fontSize = 9.sp, textAlign = TextAlign.Center, maxLines = 1)
                             }
                         }
+                    }
+
+                    Divider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 12.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text("Auto-Skip Dead Links", color = Color.White, fontSize = 12.sp)
+                            Text("Try next channel on error", color = Color.Gray, fontSize = 10.sp)
+                        }
+                        Switch(
+                            checked = autoSkipEnabled,
+                            onCheckedChange = { onToggleAutoSkip() },
+                            colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFF00A0E9))
+                        )
                     }
                 }
             }

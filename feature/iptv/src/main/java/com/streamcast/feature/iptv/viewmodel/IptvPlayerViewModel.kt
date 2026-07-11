@@ -29,6 +29,28 @@ class IptvPlayerViewModel @Inject constructor(
     private val _resizeMode = MutableStateFlow(0) // 0: Fit, 1: Fill, 2: Stretch, 3: Zoom
     val resizeMode: StateFlow<Int> = _resizeMode.asStateFlow()
 
+    private val _autoSkipEnabled = MutableStateFlow(true)
+    val autoSkipEnabled = _autoSkipEnabled.asStateFlow()
+
+    init {
+        monitorPlaybackErrors()
+    }
+
+    private fun monitorPlaybackErrors() {
+        viewModelScope.launch {
+            playbackState.collect { state ->
+                if (state is PlaybackState.Error && _autoSkipEnabled.value) {
+                    kotlinx.coroutines.delay(2000) // Wait 2s to show error before skipping
+                    zapUp()
+                }
+            }
+        }
+    }
+
+    fun toggleAutoSkip() {
+        _autoSkipEnabled.value = !_autoSkipEnabled.value
+    }
+
     fun playChannel(mediaSource: MediaSource, playlist: List<MediaSource>) {
         _currentChannel.value = mediaSource
         _channels.value = playlist

@@ -28,16 +28,24 @@ object M3UParser {
                 currentCountry = extractAttribute(trimmed, "tvg-country") ?: defaultCountry
                 currentEpgId = extractAttribute(trimmed, "tvg-id")
                 
-                // Check for inline headers like user-agent
+                // Check for inline attributes
                 extractAttribute(trimmed, "http-user-agent")?.let { currentHeaders["User-Agent"] = it }
+                extractAttribute(trimmed, "user-agent")?.let { currentHeaders["User-Agent"] = it }
                 extractAttribute(trimmed, "http-referrer")?.let { currentHeaders["Referer"] = it }
+                extractAttribute(trimmed, "referrer")?.let { currentHeaders["Referer"] = it }
 
             } else if (trimmed.startsWith("#EXTVLCOPT:")) {
-                val opt = trimmed.substringAfter("#EXTVLCOPT:").trim()
-                if (opt.startsWith("http-user-agent=")) {
-                    currentHeaders["User-Agent"] = opt.substringAfter("http-user-agent=").trim()
-                } else if (opt.startsWith("http-referrer=")) {
-                    currentHeaders["Referer"] = opt.substringAfter("http-referrer=").trim()
+                val opt = trimmed.substringAfter("#EXTVLCOPT:").trim().lowercase()
+                when {
+                    opt.contains("user-agent=") -> {
+                        currentHeaders["User-Agent"] = opt.substringAfter("user-agent=").trim()
+                    }
+                    opt.contains("referer=") -> {
+                        currentHeaders["Referer"] = opt.substringAfter("referer=").trim()
+                    }
+                    opt.contains("referrer=") -> {
+                        currentHeaders["Referer"] = opt.substringAfter("referrer=").trim()
+                    }
                 }
             } else if (!trimmed.startsWith("#")) {
                 // This is the URL line
