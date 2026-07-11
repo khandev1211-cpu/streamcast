@@ -18,6 +18,7 @@ data class Channel(
     val name: String,
     val logoUrl: String?,
     val category: String?,
+    val country: String?,
     val streamUrl: String,
     val epgChannelId: String?,
     val isFavorite: Boolean = false

@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material3.*
@@ -14,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
 import com.streamcast.core.database.entities.Channel
 import com.streamcast.core.player.MediaSource
 import com.streamcast.core.player.SourceType
@@ -38,6 +40,12 @@ fun IptvScreen(
                 TopAppBar(
                     title = { Text("IPTV & Live") },
                     actions = {
+                        IconButton(onClick = { 
+                            // This points to your desktop path as requested
+                            viewModel.importLocalDirectory("C:/Users/CHAND COMPUTER/Desktop/iptv-master/streams")
+                        }) {
+                            Icon(Icons.Default.FolderOpen, contentDescription = "Import Local")
+                        }
                         IconButton(onClick = { showAddSourceDialog = true }) {
                             Icon(Icons.Default.Add, contentDescription = "Add")
                         }
@@ -81,26 +89,40 @@ fun IptvScreen(
                             items(channels) { channel ->
                                 ListItem(
                                     headlineContent = { Text(channel.name) },
-                                    supportingContent = { Text(channel.category ?: "No category") },
+                                    supportingContent = { 
+                                        val meta = listOfNotNull(channel.category, channel.country?.uppercase()).joinToString(" • ")
+                                        Text(meta.ifEmpty { "No category" })
+                                    },
+                                    leadingContent = {
+                                        if (channel.logoUrl != null) {
+                                            AsyncImage(
+                                                model = channel.logoUrl,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(40.dp)
+                                            )
+                                        } else {
+                                            Icon(Icons.Default.Tv, contentDescription = null)
+                                        }
+                                    },
                                     modifier = Modifier.clickable { 
-                                val mediaList = channels.map {
-                                    MediaSource(
-                                        id = it.id,
-                                        uri = android.net.Uri.parse(it.streamUrl),
-                                        type = SourceType.IPTV,
-                                        displayName = it.name,
-                                        isCacheable = false
-                                    )
-                                }
-                                val currentMedia = MediaSource(
-                                    id = channel.id,
-                                    uri = android.net.Uri.parse(channel.streamUrl),
-                                    type = SourceType.IPTV,
-                                    displayName = channel.name,
-                                    isCacheable = false
-                                )
-                                onChannelClick(currentMedia, mediaList)
-                            }
+                                        val mediaList = channels.map {
+                                            MediaSource(
+                                                id = it.id,
+                                                uri = android.net.Uri.parse(it.streamUrl),
+                                                type = SourceType.IPTV,
+                                                displayName = it.name,
+                                                isCacheable = false
+                                            )
+                                        }
+                                        val currentMedia = MediaSource(
+                                            id = channel.id,
+                                            uri = android.net.Uri.parse(channel.streamUrl),
+                                            type = SourceType.IPTV,
+                                            displayName = channel.name,
+                                            isCacheable = false
+                                        )
+                                        onChannelClick(currentMedia, mediaList)
+                                    }
                                 )
                             }
                         }

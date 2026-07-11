@@ -49,6 +49,18 @@ class IptvViewModel @Inject constructor(
     fun getChannels(sourceId: String): Flow<List<Channel>> {
         return repository.getChannelsForSource(sourceId)
     }
+
+    fun importLocalDirectory(path: String) {
+        viewModelScope.launch {
+            _uiState.value = IptvUiState.Loading
+            try {
+                repository.importFromDirectory(path)
+                _uiState.value = IptvUiState.Success
+            } catch (e: Exception) {
+                _uiState.value = IptvUiState.Error(e.message ?: "Failed to import directory")
+            }
+        }
+    }
 }
 
 sealed class IptvUiState {
