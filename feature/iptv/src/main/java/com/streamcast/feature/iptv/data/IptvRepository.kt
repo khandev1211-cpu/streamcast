@@ -63,6 +63,17 @@ class IptvRepository @Inject constructor(
                     }
                 }
             }
+            "M3U_REMOTE" -> {
+                source.playlistUrl?.let { url ->
+                    try {
+                        val content = apiClient.fetchRawPlaylist(url)
+                        val channels = M3UParser.parse(content, source.id)
+                        channelDao.upsertAll(channels)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
         }
     }
 

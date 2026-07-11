@@ -27,6 +27,45 @@ class IptvViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<IptvUiState>(IptvUiState.Idle)
     val uiState: StateFlow<IptvUiState> = _uiState.asStateFlow()
 
+    init {
+        viewModelScope.launch {
+            repository.getSources().collect { list ->
+                if (list.isEmpty()) {
+                    preloadDefaults()
+                }
+            }
+        }
+    }
+
+    private suspend fun preloadDefaults() {
+        val defaultSources = listOf(
+            IptvSource(
+                id = "default_news",
+                name = "Global News",
+                type = "M3U_REMOTE",
+                playlistUrl = "https://iptv-org.github.io/iptv/categories/news.m3u",
+                host = null,
+                username = null,
+                password = null,
+                lastSyncedAt = null
+            ),
+            IptvSource(
+                id = "default_movies",
+                name = "Global Movies",
+                type = "M3U_REMOTE",
+                playlistUrl = "https://iptv-org.github.io/iptv/categories/movies.m3u",
+                host = null,
+                username = null,
+                password = null,
+                lastSyncedAt = null
+            )
+        )
+        defaultSources.forEach { 
+            repository.addSource(it)
+            repository.refreshSource(it.id)
+        }
+    }
+
     fun addXtreamSource(name: String, host: String, user: String, pass: String) {
         viewModelScope.launch {
             _uiState.value = IptvUiState.Loading

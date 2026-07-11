@@ -9,6 +9,7 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import retrofit2.converter.scalars.ScalarsConverterFactory
 import javax.inject.Singleton
 
 @Module
@@ -28,12 +29,10 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideIptvApiClient(okHttpClient: OkHttpClient): IptvApiClient {
-        // The base URL will be dynamic for Xtream Codes, so we use a dummy one here
-        // and override it using a custom call or by using a dynamic base URL interceptor.
-        // For simplicity, we'll assume a generic builder that can be used.
         return Retrofit.Builder()
             .baseUrl("https://dummy.com/") // Placeholder
             .client(okHttpClient)
+            .addConverterFactory(ScalarsConverterFactory.create())
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(IptvApiClient::class.java)

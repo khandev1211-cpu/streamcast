@@ -2,8 +2,12 @@ package com.streamcast.core.network
 
 import retrofit2.http.GET
 import retrofit2.http.Query
+import retrofit2.http.Url
 
 interface IptvApiClient {
+    @GET
+    suspend fun fetchRawPlaylist(@Url url: String): String
+
     @GET("player_api.php")
     suspend fun getLiveCategories(
         @Query("username") username: String,

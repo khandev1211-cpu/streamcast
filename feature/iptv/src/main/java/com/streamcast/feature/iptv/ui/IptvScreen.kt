@@ -67,7 +67,11 @@ fun IptvScreen(
             when (selectedTabIndex) {
                 0 -> {
                     // IPTV Content
-                    if (selectedSourceId == null) {
+                    if (sources.isEmpty()) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator()
+                        }
+                    } else if (selectedSourceId == null) {
                         LazyColumn {
                             items(sources) { source ->
                                 ListItem(
