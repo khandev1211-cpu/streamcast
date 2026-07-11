@@ -26,6 +26,9 @@ interface PlayerManager {
     fun clearAbRepeatRange()
 
     fun setVolume(volume: Float)
+    
+    fun setShuffleMode(enabled: Boolean)
+    fun setRepeatMode(mode: Int) // Player.REPEAT_MODE_OFF, REPEAT_MODE_ONE, REPEAT_MODE_ALL
 }
 
 /**

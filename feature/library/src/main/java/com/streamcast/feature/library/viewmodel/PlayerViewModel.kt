@@ -70,7 +70,15 @@ class PlayerViewModel @Inject constructor(
     private val _subtitleBackgroundOpacity = MutableStateFlow(0.6f)
     val subtitleBackgroundOpacity = _subtitleBackgroundOpacity.asStateFlow()
 
+    private val _shuffleMode = MutableStateFlow(false)
+    val shuffleMode = _shuffleMode.asStateFlow()
+
+    private val _repeatMode = MutableStateFlow(0) // 0: OFF, 1: ONE, 2: ALL
+    val repeatMode = _repeatMode.asStateFlow()
+
     private val _currentFolderItems = MutableStateFlow<List<MediaSource>>(emptyList())
+    val currentFolderItems = _currentFolderItems.asStateFlow()
+
     private var currentMediaIndex = -1
 
     // Subtitle Sync Offset (ms)
@@ -202,6 +210,16 @@ class PlayerViewModel @Inject constructor(
     fun setVolume(volume: Float) {
         _volume.value = volume
         playerManager.setVolume(volume)
+    }
+
+    fun toggleShuffle() {
+        _shuffleMode.value = !_shuffleMode.value
+        playerManager.setShuffleMode(_shuffleMode.value)
+    }
+
+    fun toggleRepeatMode() {
+        _repeatMode.value = (_repeatMode.value + 1) % 3
+        playerManager.setRepeatMode(_repeatMode.value)
     }
 
     fun setSubtitleStyle(size: Float? = null, color: Long? = null, opacity: Float? = null) {

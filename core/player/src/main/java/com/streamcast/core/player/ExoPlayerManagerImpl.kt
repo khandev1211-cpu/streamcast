@@ -124,6 +124,14 @@ class ExoPlayerManagerImpl @Inject constructor(
         exoPlayer?.volume = volume
     }
 
+    override fun setShuffleMode(enabled: Boolean) {
+        exoPlayer?.shuffleModeEnabled = enabled
+    }
+
+    override fun setRepeatMode(mode: Int) {
+        exoPlayer?.repeatMode = mode
+    }
+
     private fun startRepeatMonitor() {
         repeatJob?.cancel()
         repeatJob = scope.launch {
