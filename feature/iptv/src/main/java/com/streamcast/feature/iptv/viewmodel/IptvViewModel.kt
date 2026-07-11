@@ -11,6 +11,7 @@ import com.streamcast.core.player.SourceType
 import com.streamcast.feature.iptv.data.IptvPlaylistManager
 import com.streamcast.feature.iptv.data.IptvRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -79,8 +80,15 @@ class IptvViewModel @Inject constructor(
         _selectedCategory
     ) { channels, query, category ->
         channels.filter { channel ->
-            val matchesQuery = channel.name.contains(query, ignoreCase = true)
-            val matchesCategory = category == null || category == "All" || channel.category == category
+            val matchesQuery = query.isEmpty() || channel.name.contains(query, ignoreCase = true)
+            // If searching, ignore category filter. Otherwise, check match.
+            val matchesCategory = query.isNotEmpty() || 
+                                 category == null ||
+                                 category == "All" || 
+                                 category == "All Channels" || 
+                                 category == "Favorites" || 
+                                 category == "Recently Played" || 
+                                 channel.category == category
             matchesQuery && matchesCategory
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -119,8 +127,14 @@ class IptvViewModel @Inject constructor(
     private fun startBackgroundHealthChecks() {
         viewModelScope.launch {
             allChannels.collect { channels ->
-                // Check channels with unknown status, 5 at a time to be polite
-                channels.filter { it.lastCheckStatus == 0 }.take(5).forEach { 
+                delay(1000) // Be polite to the UI and network
+                // Check channels with unknown status
+                // Priority 1: Current filtered channels (what user sees)
+                val prioritised = filteredChannels.value.filter { it.lastCheckStatus == 0 }.take(5)
+                // Priority 2: Any other unknown channels
+                val others = channels.filter { it.lastCheckStatus == 0 }.take(5 - prioritised.size)
+                
+                (prioritised + others).forEach {
                     repository.checkChannelHealth(it)
                 }
             }
