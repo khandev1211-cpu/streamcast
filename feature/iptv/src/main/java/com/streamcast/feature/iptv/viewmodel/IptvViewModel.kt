@@ -42,15 +42,17 @@ class IptvViewModel @Inject constructor(
     ) { channels, query, category ->
         channels.filter { channel ->
             val matchesQuery = channel.name.contains(query, ignoreCase = true)
-            val matchesCategory = category == "All" || channel.category == category
+            val matchesCategory = category == null || category == "All" || channel.category == category
             matchesQuery && matchesCategory
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val categories: StateFlow<List<String>> = allChannels.map { channels ->
-        val list = channels.mapNotNull { it.category }.distinct().sorted()
-        listOf("All") + list
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), listOf("All"))
+    data class IptvCategory(val name: String, val channelCount: Int)
+
+    val categoryFolders: StateFlow<List<IptvCategory>> = allChannels.map { channels ->
+        val groups = channels.groupBy { it.category ?: "Uncategorized" }
+        groups.map { (name, list) -> IptvCategory(name, list.size) }.sortedBy { it.name }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _uiState = MutableStateFlow<IptvUiState>(IptvUiState.Idle)
     val uiState: StateFlow<IptvUiState> = _uiState.asStateFlow()

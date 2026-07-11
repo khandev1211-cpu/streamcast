@@ -4,7 +4,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -14,6 +16,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -32,7 +36,7 @@ fun IptvScreen(
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     val tabs = listOf("IPTV", "Live")
     
-    val categories by viewModel.categories.collectAsState()
+    val categoryFolders by viewModel.categoryFolders.collectAsState()
     val filteredChannels by viewModel.filteredChannels.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val selectedCategory by viewModel.selectedCategory.collectAsState()
@@ -54,7 +58,16 @@ fun IptvScreen(
                     )
                 } else {
                     TopAppBar(
-                        title = { Text("IPTV & Live") },
+                        title = { 
+                            Text(if (selectedCategory != null && selectedCategory != "All") selectedCategory!! else "IPTV & Live") 
+                        },
+                        navigationIcon = {
+                            if (selectedCategory != null && selectedCategory != "All") {
+                                IconButton(onClick = { viewModel.onCategorySelected(null) }) {
+                                    Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                                }
+                            }
+                        },
                         actions = {
                             IconButton(onClick = { isSearching = true }) {
                                 Icon(Icons.Default.Search, contentDescription = "Search")
@@ -71,22 +84,16 @@ fun IptvScreen(
                     )
                 }
                 
-                TabRow(selectedTabIndex = selectedTabIndex) {
-                    tabs.forEachIndexed { index, title ->
-                        Tab(
-                            selected = selectedTabIndex == index,
-                            onClick = { selectedTabIndex = index },
-                            text = { Text(title) }
-                        )
+                if (selectedCategory == null || selectedCategory == "All") {
+                    TabRow(selectedTabIndex = selectedTabIndex) {
+                        tabs.forEachIndexed { index, title ->
+                            Tab(
+                                selected = selectedTabIndex == index,
+                                onClick = { selectedTabIndex = index },
+                                text = { Text(title) }
+                            )
+                        }
                     }
-                }
-
-                if (selectedTabIndex == 0) {
-                    CategorySelector(
-                        categories = categories,
-                        selectedCategory = selectedCategory ?: "All",
-                        onCategorySelect = { viewModel.onCategorySelected(it) }
-                    )
                 }
             }
         }
@@ -94,40 +101,42 @@ fun IptvScreen(
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
             when (selectedTabIndex) {
                 0 -> {
-                    // IPTV Content
-                    if (filteredChannels.isEmpty() && searchQuery.isEmpty()) {
-                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator()
-                        }
-                    } else {
-                        LazyColumn(modifier = Modifier.fillMaxSize()) {
-                            items(filteredChannels) { channel ->
-                                ChannelItem(
-                                    channel = channel,
-                                    onClick = { 
-                                        val mediaList = filteredChannels.map {
-                                            MediaSource(
-                                                id = it.id,
-                                                uri = android.net.Uri.parse(it.streamUrl),
-                                                type = SourceType.IPTV,
-                                                displayName = it.name,
-                                                isCacheable = false,
-                                                headers = it.headers
-                                            )
-                                        }
-                                        val currentMedia = MediaSource(
-                                            id = channel.id,
-                                            uri = android.net.Uri.parse(channel.streamUrl),
-                                            type = SourceType.IPTV,
-                                            displayName = channel.name,
-                                            isCacheable = false,
-                                            headers = channel.headers
-                                        )
-                                        onChannelClick(currentMedia, mediaList)
-                                    }
-                                )
+                    if (searchQuery.isNotEmpty()) {
+                        // Search Mode
+                        ChannelList(channels = filteredChannels, onChannelClick = onChannelClick)
+                    } else if (selectedCategory == null || selectedCategory == "All") {
+                        // Folder View Mode
+                        if (categoryFolders.isEmpty()) {
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator()
+                            }
+                        } else {
+                            LazyVerticalGrid(
+                                columns = GridCells.Fixed(2),
+                                contentPadding = PaddingValues(16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                // Master Folder
+                                item {
+                                    CategoryFolderItem(
+                                        name = "All Channels",
+                                        count = categoryFolders.sumOf { it.channelCount },
+                                        onClick = { viewModel.onCategorySelected("All") }
+                                    )
+                                }
+                                items(categoryFolders) { category ->
+                                    CategoryFolderItem(
+                                        name = category.name,
+                                        count = category.channelCount,
+                                        onClick = { viewModel.onCategorySelected(category.name) }
+                                    )
+                                }
                             }
                         }
+                    } else {
+                        // Channels in specific category
+                        ChannelList(channels = filteredChannels, onChannelClick = onChannelClick)
                     }
                 }
                 1 -> {
@@ -143,43 +152,78 @@ fun IptvScreen(
     }
 
     if (showAddSourceDialog) {
-        if (selectedTabIndex == 0) {
-            AddSourceDialog(
-                onDismiss = { showAddSourceDialog = false },
-                onAdd = { name, host, user, pass ->
-                    viewModel.addXtreamSource(name, host, user, pass)
-                    showAddSourceDialog = false
-                }
+        AddSourceDialog(
+            onDismiss = { showAddSourceDialog = false },
+            onAdd = { name, host, user, pass ->
+                viewModel.addXtreamSource(name, host, user, pass)
+                showAddSourceDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+fun CategoryFolderItem(name: String, count: Int, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        colors = CardDefaults.cardColors(containerColor = Color.Gray.copy(alpha = 0.1f))
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                Icons.Default.Folder,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = Color(0xFF00A0E9)
             )
-        } else {
-            showAddSourceDialog = false
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = name,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = "$count channels",
+                fontSize = 12.sp,
+                color = Color.Gray
+            )
         }
     }
 }
 
 @Composable
-fun CategorySelector(
-    categories: List<String>,
-    selectedCategory: String,
-    onCategorySelect: (String) -> Unit
-) {
-    LazyRow(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(vertical = 8.dp),
-        contentPadding = PaddingValues(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        items(categories) { category ->
-            FilterChip(
-                selected = selectedCategory == category,
-                onClick = { onCategorySelect(category) },
-                label = { Text(category) },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = Color(0xFF00A0E9),
-                    selectedLabelColor = Color.White
-                )
+fun ChannelList(channels: List<Channel>, onChannelClick: (MediaSource, List<MediaSource>) -> Unit) {
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
+        items(channels) { channel ->
+            ChannelItem(
+                channel = channel,
+                onClick = { 
+                    val mediaList = channels.map {
+                        MediaSource(
+                            id = it.id,
+                            uri = android.net.Uri.parse(it.streamUrl),
+                            type = SourceType.IPTV,
+                            displayName = it.name,
+                            isCacheable = false,
+                            headers = it.headers
+                        )
+                    }
+                    val currentMedia = MediaSource(
+                        id = channel.id,
+                        uri = android.net.Uri.parse(channel.streamUrl),
+                        type = SourceType.IPTV,
+                        displayName = channel.name,
+                        isCacheable = false,
+                        headers = channel.headers
+                    )
+                    onChannelClick(currentMedia, mediaList)
+                }
             )
         }
     }
