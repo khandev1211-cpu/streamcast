@@ -29,6 +29,16 @@ class IptvRepository @Inject constructor(
         channelDao.updateFavorite(channelId, isFavorite)
     }
 
+    suspend fun checkChannelHealth(channel: Channel) {
+        try {
+            val response = apiClient.fetchRawPlaylist(channel.streamUrl) // Use the same call or create a HEAD one
+            val status = if (response.isNotEmpty()) 1 else 2
+            channelDao.upsertAll(listOf(channel.copy(lastCheckStatus = status)))
+        } catch (e: Exception) {
+            channelDao.upsertAll(listOf(channel.copy(lastCheckStatus = 2)))
+        }
+    }
+
     suspend fun addSource(source: IptvSource) {
         sourceDao.upsert(source)
     }

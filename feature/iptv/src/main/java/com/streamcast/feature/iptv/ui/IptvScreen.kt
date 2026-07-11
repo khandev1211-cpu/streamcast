@@ -251,7 +251,21 @@ fun SearchTopBar(
 @Composable
 fun ChannelItem(channel: Channel, onClick: () -> Unit) {
     ListItem(
-        headlineContent = { Text(channel.name, fontWeight = FontWeight.SemiBold) },
+        headlineContent = { 
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(channel.name, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                val statusColor = when(channel.lastCheckStatus) {
+                    1 -> Color.Green
+                    2 -> Color.Red
+                    else -> Color.Gray
+                }
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .background(statusColor, shape = androidx.compose.foundation.shape.CircleShape)
+                )
+            }
+        },
         supportingContent = { 
             val meta = listOfNotNull(channel.category, channel.country?.uppercase()).joinToString(" • ")
             Text(meta.ifEmpty { "No category" }, fontSize = 12.sp)

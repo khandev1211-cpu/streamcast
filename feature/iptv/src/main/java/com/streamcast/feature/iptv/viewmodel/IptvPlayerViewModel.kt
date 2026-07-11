@@ -39,6 +39,9 @@ class IptvPlayerViewModel @Inject constructor(
     private val _resizeMode = MutableStateFlow(0) // 0: Fit, 1: Fill, 2: Stretch, 3: Zoom
     val resizeMode: StateFlow<Int> = _resizeMode.asStateFlow()
 
+    private val _userAgentProfile = MutableStateFlow("Default")
+    val userAgentProfile = _userAgentProfile.asStateFlow()
+
     private val _autoSkipEnabled = MutableStateFlow(true)
     val autoSkipEnabled = _autoSkipEnabled.asStateFlow()
 
@@ -61,12 +64,31 @@ class IptvPlayerViewModel @Inject constructor(
         _autoSkipEnabled.value = !_autoSkipEnabled.value
     }
 
+    fun cycleUserAgent() {
+        val profiles = listOf("Default", "Android TV", "iPhone", "Samsung TV")
+        val nextIndex = (profiles.indexOf(_userAgentProfile.value) + 1) % profiles.size
+        _userAgentProfile.value = profiles[nextIndex]
+        // Reload current channel with new UA
+        _currentChannel.value?.let { playChannel(it) }
+    }
+
     fun playChannel(mediaSource: MediaSource) {
         val playlist = playlistManager.getPlaylist()
-        _currentChannel.value = mediaSource
+        
+        // Apply UA Profile
+        val customHeaders = mediaSource.headers?.toMutableMap() ?: mutableMapOf()
+        when (_userAgentProfile.value) {
+            "Android TV" -> customHeaders["User-Agent"] = "AndroidTV/1.0 (Google; Pixel TV)"
+            "iPhone" -> customHeaders["User-Agent"] = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+            "Samsung TV" -> customHeaders["User-Agent"] = "Mozilla/5.0 (SMART-TV; LINUX; Tizen 6.0) AppleWebKit/537.36 (KHTML, like Gecko) 71.0.3578.49/6.0 TV Safari/537.36"
+        }
+        
+        val sourceWithHeaders = mediaSource.copy(headers = customHeaders)
+        
+        _currentChannel.value = sourceWithHeaders
         _channels.value = playlist
         currentIndex = playlist.indexOfFirst { it.id == mediaSource.id }
-        playerManager.play(mediaSource)
+        playerManager.play(sourceWithHeaders)
         checkFavoriteStatus(mediaSource.id)
     }
 

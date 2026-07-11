@@ -71,6 +71,7 @@ fun IptvPlayerScreen(
     val isFavorite by viewModel.isFavorite.collectAsState()
     val resizeModeVm by viewModel.resizeMode.collectAsState()
     val autoSkip by viewModel.autoSkipEnabled.collectAsState()
+    val uaProfile by viewModel.userAgentProfile.collectAsState()
     
     var showControls by remember { mutableStateOf(true) }
     var showOverflowGrid by remember { mutableStateOf(false) }
@@ -227,7 +228,9 @@ fun IptvPlayerScreen(
                 autoSkipEnabled = autoSkip,
                 onToggleAutoSkip = { viewModel.toggleAutoSkip() },
                 onStreamInfoClick = { showStreamInfo = true },
-                onExternalPlayerClick = { openExternalPlayer(context, currentChannel ?: mediaSource) }
+                onExternalPlayerClick = { openExternalPlayer(context, currentChannel ?: mediaSource) },
+                uaProfile = uaProfile,
+                onCycleUA = { viewModel.cycleUserAgent() }
             )
         }
 
@@ -335,7 +338,9 @@ fun IptvOverflowMenu(
     autoSkipEnabled: Boolean = true,
     onToggleAutoSkip: () -> Unit = {},
     onStreamInfoClick: () -> Unit = {},
-    onExternalPlayerClick: () -> Unit = {}
+    onExternalPlayerClick: () -> Unit = {},
+    uaProfile: String = "Default",
+    onCycleUA: () -> Unit = {}
 ) {
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -356,6 +361,7 @@ fun IptvOverflowMenu(
                     val items = listOf(
                         "Aspect Ratio" to Icons.Default.AspectRatio to onToggleResize,
                         "External Player" to Icons.Default.OpenInNew to onExternalPlayerClick,
+                        "UA: $uaProfile" to Icons.Default.Phonelink to onCycleUA,
                         "Stream Info" to Icons.Default.Info to onStreamInfoClick,
                         "Audio Tracks" to Icons.Default.MusicNote to {},
                         "Subtitles" to Icons.Default.Subtitles to {},
