@@ -20,6 +20,10 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+
 @Singleton
 class ExoPlayerManagerImpl @Inject constructor(
     @ApplicationContext private val context: Context
@@ -42,27 +46,36 @@ class ExoPlayerManagerImpl @Inject constructor(
     private var repeatJob: Job? = null
     private val scope = CoroutineScope(Dispatchers.Main)
 
+    @UnstableApi
     private fun ensurePlayer(): ExoPlayer {
-        return exoPlayer ?: ExoPlayer.Builder(context)
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
-                    .setUsage(C.USAGE_MEDIA)
-                    .build(),
-                true // handle audio focus
-            )
-            .setHandleAudioBecomingNoisy(true)
-            .build().also {
-                it.addListener(this)
-                exoPlayer = it
-                _playerState.value = it
-            }
+        return exoPlayer ?: run {
+            val httpDataSourceFactory = DefaultHttpDataSource.Factory()
+                .setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                .setAllowCrossProtocolRedirects(true)
+
+            ExoPlayer.Builder(context)
+                .setMediaSourceFactory(DefaultMediaSourceFactory(context).setDataSourceFactory(httpDataSourceFactory))
+                .setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+                        .setUsage(C.USAGE_MEDIA)
+                        .build(),
+                    true
+                )
+                .setHandleAudioBecomingNoisy(true)
+                .build().also {
+                    it.addListener(this)
+                    exoPlayer = it
+                    _playerState.value = it
+                }
+        }
     }
 
     override fun play(source: MediaSource) {
         playPlaylist(listOf(source), 0)
     }
 
+    @UnstableApi
     override fun playPlaylist(sources: List<MediaSource>, startIndex: Int) {
         android.util.Log.d("ExoPlayerManager", "Playing playlist with ${sources.size} items at index $startIndex")
         val player = ensurePlayer()
