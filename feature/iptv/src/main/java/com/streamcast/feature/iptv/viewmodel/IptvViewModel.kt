@@ -171,25 +171,28 @@ class IptvViewModel @Inject constructor(
 
     private var healthCheckJob: Job? = null
 
-    // Restore health checks with ultra-gentle logic to avoid Android 10 scroll crashes
-    fun pauseHealthChecks() {
-        healthCheckJob?.cancel()
-    }
-
+    // Restore health checks with a SAFE, non-looping timer logic
     fun resumeHealthChecks() {
         if (healthCheckJob?.isActive == true) return
         healthCheckJob = viewModelScope.launch {
-            allChannels.collect { channels ->
-                delay(5000) // Wait 5s after any list change before pinging
-                
-                // Prioritize channels the user is actually seeing on screen
-                val prioritised = filteredChannels.value.filter { it.lastCheckStatus == 0 }.take(2)
-                val others = channels.filter { it.lastCheckStatus == 0 }.take(2 - prioritised.size)
-                
-                (prioritised + others).forEach {
-                    repository.checkChannelHealth(it)
-                    delay(2000) // 2 second pause between pings to keep main thread free
+            // Wait for app to settle after launch
+            delay(10000) 
+            while(true) {
+                // Fetch the list ONCE at the start of each check cycle
+                // This avoids the infinite loop triggered by DB updates
+                val currentChannels = allChannels.value
+                if (currentChannels.isNotEmpty()) {
+                    val prioritised = filteredChannels.value.filter { it.lastCheckStatus == 0 }.take(2)
+                    val others = currentChannels.filter { it.lastCheckStatus == 0 }.take(2 - prioritised.size)
+                    
+                    (prioritised + others).forEach {
+                        repository.checkChannelHealth(it)
+                        // Huge delay between pings to ensure Android 10 devices don't choke
+                        delay(10000) 
+                    }
                 }
+                // Wait 30 seconds before starting the next cycle
+                delay(30000)
             }
         }
     }

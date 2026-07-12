@@ -38,12 +38,16 @@ import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-    override fun onGenericMotionEvent(event: android.view.MotionEvent): Boolean {
-        // Ultimate fix for ACTION_HOVER_EXIT crash on Android 10 devices
-        if (event.action == android.view.MotionEvent.ACTION_HOVER_EXIT) {
-            return true
+    override fun dispatchGenericMotionEvent(ev: android.view.MotionEvent?): Boolean {
+        // PERMANENT FIX for ACTION_HOVER_EXIT crash on Android 10/TECNO devices
+        // We block all hover events at the system level as they are not needed for a touch-based IPTV app
+        val action = ev?.action ?: return super.dispatchGenericMotionEvent(ev)
+        if (action == android.view.MotionEvent.ACTION_HOVER_EXIT || 
+            action == android.view.MotionEvent.ACTION_HOVER_ENTER ||
+            action == android.view.MotionEvent.ACTION_HOVER_MOVE) {
+            return true // Consume and kill the event before it reaches Compose
         }
-        return super.onGenericMotionEvent(event)
+        return super.dispatchGenericMotionEvent(ev)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
