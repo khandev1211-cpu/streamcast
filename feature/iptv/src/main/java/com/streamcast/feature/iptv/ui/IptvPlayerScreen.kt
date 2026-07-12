@@ -10,7 +10,7 @@ import androidx.annotation.OptIn
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
@@ -122,15 +122,12 @@ fun IptvPlayerScreen(
                 })
             }
             .pointerInput(Unit) {
-                detectDragGestures(
-                    onDragEnd = { /* Handle zap if distance high? */ },
-                    onDrag = { change, dragAmount ->
-                        if (dragAmount.x < -20 && !showSideList) {
-                            showSideList = true
-                            showControls = false
-                        }
+                detectHorizontalDragGestures { _, dragAmount: Float ->
+                    if (dragAmount < -20f && !showSideList) {
+                        showSideList = true
+                        showControls = false
                     }
-                )
+                }
             }
             .pointerInput(Unit) {
                 detectVerticalDragGestures(
