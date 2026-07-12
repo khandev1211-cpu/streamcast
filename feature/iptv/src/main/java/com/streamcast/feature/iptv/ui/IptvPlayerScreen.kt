@@ -10,6 +10,7 @@ import androidx.annotation.OptIn
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -115,11 +116,12 @@ fun IptvPlayerScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
-            .pointerInput(Unit) {
-                detectTapGestures(onTap = { 
-                    if (showSideList) showSideList = false
-                    else showControls = !showControls 
-                })
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) {
+                if (showSideList) showSideList = false
+                else showControls = !showControls
             }
             .pointerInput(Unit) {
                 detectHorizontalDragGestures { _, dragAmount: Float ->

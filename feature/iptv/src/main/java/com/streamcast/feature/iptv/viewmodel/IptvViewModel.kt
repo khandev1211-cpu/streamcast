@@ -176,15 +176,16 @@ class IptvViewModel @Inject constructor(
         if (healthCheckJob?.isActive == true) return
         healthCheckJob = viewModelScope.launch {
             allChannels.collect { channels ->
-                delay(2000) // Be polite to the UI and network
+                delay(3000) // Even more polite (3s)
                 // Check channels with unknown status
                 // Priority 1: Current filtered channels (what user sees)
-                val prioritised = filteredChannels.value.filter { it.lastCheckStatus == 0 }.take(5)
+                val prioritised = filteredChannels.value.filter { it.lastCheckStatus == 0 }.take(2) // Only 2 at a time
                 // Priority 2: Any other unknown channels
-                val others = channels.filter { it.lastCheckStatus == 0 }.take(5 - prioritised.size)
+                val others = channels.filter { it.lastCheckStatus == 0 }.take(2 - prioritised.size)
                 
                 (prioritised + others).forEach {
                     repository.checkChannelHealth(it)
+                    delay(500) // Delay between each individual check
                 }
             }
         }
