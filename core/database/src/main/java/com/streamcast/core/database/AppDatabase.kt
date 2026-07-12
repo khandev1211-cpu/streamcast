@@ -22,7 +22,7 @@ import com.streamcast.core.database.entities.SubtitleCache
         SubtitleCache::class,
         EpgProgram::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

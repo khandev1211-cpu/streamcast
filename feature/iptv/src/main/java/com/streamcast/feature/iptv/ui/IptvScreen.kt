@@ -90,6 +90,9 @@ fun IptvScreen(
                             IconButton(onClick = { isSearching = true }) {
                                 Icon(Icons.Default.Search, contentDescription = "Search")
                             }
+                            IconButton(onClick = { viewModel.refreshAllSources() }) {
+                                Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                            }
                             IconButton(onClick = { 
                                 viewModel.importLocalDirectory("C:/Users/CHAND COMPUTER/Desktop/iptv-master/streams")
                             }) {

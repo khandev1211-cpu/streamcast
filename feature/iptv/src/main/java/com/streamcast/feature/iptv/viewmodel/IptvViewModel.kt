@@ -87,14 +87,18 @@ class IptvViewModel @Inject constructor(
             val matchesQuery = query.isEmpty() || channel.name.contains(query, ignoreCase = true)
             // If searching, ignore category filter. Otherwise, check match.
             val matchesCategory = query.isNotEmpty() || 
-                                 category == null ||
+                                 category == null || 
                                  category == "All" || 
                                  category == "All Channels" || 
                                  category == "Favorites" || 
                                  category == "Recently Played" || 
                                  channel.category == category
             
-            val matchesCountry = country == null || channel.country == country
+            val matchesCountry = when (country) {
+                null -> true
+                "Unknown" -> channel.country == null
+                else -> channel.country == country
+            }
 
             matchesQuery && matchesCategory && matchesCountry
         }
@@ -238,6 +242,16 @@ class IptvViewModel @Inject constructor(
             } catch (e: Exception) {
                 _uiState.value = IptvUiState.Error(e.message ?: "Failed to import directory")
             }
+        }
+    }
+
+    fun refreshAllSources() {
+        viewModelScope.launch {
+            _uiState.value = IptvUiState.Loading
+            sources.value.forEach { source ->
+                repository.refreshSource(source.id)
+            }
+            _uiState.value = IptvUiState.Success
         }
     }
 
