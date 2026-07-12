@@ -269,6 +269,26 @@ class IptvViewModel @Inject constructor(
         _selectedCategory.value = null // Clear category when country is picked
     }
 
+    fun importRemoteCountry(countryCode: String) {
+        viewModelScope.launch {
+            val url = "https://iptv-org.github.io/iptv/countries/${countryCode.lowercase()}.m3u"
+            val sourceId = "remote_country_$countryCode"
+            repository.addSource(
+                IptvSource(
+                    id = sourceId,
+                    name = "Country: ${countryCode.uppercase()}",
+                    type = "M3U_REMOTE",
+                    playlistUrl = url,
+                    host = null,
+                    username = null,
+                    password = null,
+                    lastSyncedAt = null
+                )
+            )
+            repository.refreshSource(sourceId)
+        }
+    }
+
     fun markAsPlayed(channelId: String) {
         viewModelScope.launch {
             repository.updateLastPlayed(channelId)

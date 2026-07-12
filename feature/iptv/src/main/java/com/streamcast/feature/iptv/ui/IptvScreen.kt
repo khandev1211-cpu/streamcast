@@ -53,6 +53,7 @@ fun IptvScreen(
     val selectedCountry by viewModel.selectedCountry.collectAsState()
 
     var showAddSourceDialog by remember { mutableStateOf(false) }
+    var showCountryPickerDialog by remember { mutableStateOf(false) }
     var isSearching by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -89,6 +90,9 @@ fun IptvScreen(
                         actions = {
                             IconButton(onClick = { isSearching = true }) {
                                 Icon(Icons.Default.Search, contentDescription = "Search")
+                            }
+                            IconButton(onClick = { showCountryPickerDialog = true }) {
+                                Icon(Icons.Default.Language, contentDescription = "All Countries")
                             }
                             IconButton(onClick = { viewModel.refreshAllSources() }) {
                                 Icon(Icons.Default.Refresh, contentDescription = "Refresh")
@@ -275,6 +279,101 @@ fun IptvScreen(
             )
         }
     }
+
+    if (showCountryPickerDialog) {
+        CountryPickerDialog(
+            onDismiss = { showCountryPickerDialog = false },
+            onSelect = { 
+                viewModel.importRemoteCountry(it)
+                showCountryPickerDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+fun CountryPickerDialog(onDismiss: () -> Unit, onSelect: (String) -> Unit) {
+    val countries = listOf(
+        "af" to "Afghanistan", "al" to "Albania", "dz" to "Algeria", "as" to "American Samoa", "ad" to "Andorra",
+        "ao" to "Angola", "ai" to "Anguilla", "aq" to "Antarctica", "ag" to "Antigua and Barbuda", "ar" to "Argentina",
+        "am" to "Armenia", "aw" to "Aruba", "au" to "Australia", "at" to "Austria", "az" to "Azerbaijan",
+        "bs" to "Bahamas", "bh" to "Bahrain", "bd" to "Bangladesh", "bb" to "Barbados", "by" to "Belarus",
+        "be" to "Belgium", "bz" to "Belize", "bj" to "Benin", "bm" to "Bermuda", "bt" to "Bhutan",
+        "bo" to "Bolivia", "ba" to "Bosnia and Herzegovina", "bw" to "Botswana", "br" to "Brazil", "io" to "British Indian Ocean Territory",
+        "bn" to "Brunei Darussalam", "bg" to "Bulgaria", "bf" to "Burkina Faso", "bi" to "Burundi", "kh" to "Cambodia",
+        "cm" to "Cameroon", "ca" to "Canada", "cv" to "Cape Verde", "ky" to "Cayman Islands", "cf" to "Central African Republic",
+        "td" to "Chad", "cl" to "Chile", "cn" to "China", "cx" to "Christmas Island", "cc" to "Cocos (Keeling) Islands",
+        "co" to "Colombia", "km" to "Comoros", "cg" to "Congo", "cd" to "Congo, The Democratic Republic of The", "ck" to "Cook Islands",
+        "cr" to "Costa Rica", "ci" to "Cote D'ivoire", "hr" to "Croatia", "cu" to "Cuba", "cy" to "Cyprus",
+        "cz" to "Czech Republic", "dk" to "Denmark", "dj" to "Djibouti", "dm" to "Dominica", "do" to "Dominican Republic",
+        "ec" to "Ecuador", "eg" to "Egypt", "sv" to "El Salvador", "gq" to "Equatorial Guinea", "er" to "Eritrea",
+        "ee" to "Estonia", "et" to "Ethiopia", "fk" to "Falkland Islands (Malvinas)", "fo" to "Faroe Islands", "fj" to "Fiji",
+        "fi" to "Finland", "fr" to "France", "gf" to "French Guiana", "pf" to "French Polynesia", "tf" to "French Southern Territories",
+        "ga" to "Gabon", "gm" to "Gambia", "ge" to "Georgia", "de" to "Germany", "gh" to "Ghana",
+        "gi" to "Gibraltar", "gr" to "Greece", "gl" to "Greenland", "gd" to "Grenada", "gp" to "Guadeloupe",
+        "gu" to "Guam", "gt" to "Guatemala", "gn" to "Guinea", "gw" to "Guinea-bissau", "gy" to "Guyana",
+        "ht" to "Haiti", "hm" to "Heard Island and Mcdonald Islands", "va" to "Holy See (Vatican City State)", "hn" to "Honduras", "hk" to "Hong Kong",
+        "hu" to "Hungary", "is" to "Iceland", "in" to "India", "id" to "Indonesia", "ir" to "Iran, Islamic Republic of",
+        "iq" to "Iraq", "ie" to "Ireland", "il" to "Israel", "it" to "Italy", "jm" to "Jamaica",
+        "jp" to "Japan", "jo" to "Jordan", "kz" to "Kazakhstan", "ke" to "Kenya", "ki" to "Kiribati",
+        "kp" to "Korea, Democratic People's Republic of", "kr" to "Korea, Republic of", "kw" to "Kuwait", "kg" to "Kyrgyzstan", "la" to "Lao People's Democratic Republic",
+        "lv" to "Latvia", "lb" to "Lebanon", "ls" to "Lesotho", "lr" to "Liberia", "ly" to "Libyan Arab Jamahiriya",
+        "li" to "Liechtenstein", "lt" to "Lithuania", "lu" to "Luxembourg", "mo" to "Macao", "mk" to "Macedonia, The Former Yugoslav Republic of",
+        "mg" to "Madagascar", "mw" to "Malawi", "my" to "Malaysia", "mv" to "Maldives", "ml" to "Mali",
+        "mt" to "Malta", "mh" to "Marshall Islands", "mq" to "Martinique", "mr" to "Mauritania", "mu" to "Mauritius",
+        "yt" to "Mayotte", "mx" to "Mexico", "fm" to "Micronesia, Federated States of", "md" to "Moldova, Republic of", "mc" to "Monaco",
+        "mn" to "Mongolia", "ms" to "Montserrat", "ma" to "Morocco", "mz" to "Mozambique", "mm" to "Myanmar",
+        "na" to "Namibia", "nr" to "Nauru", "np" to "Nepal", "nl" to "Netherlands", "an" to "Netherlands Antilles",
+        "nc" to "New Caledonia", "nz" to "New Zealand", "ni" to "Nicaragua", "ne" to "Niger", "ng" to "Nigeria",
+        "nu" to "Niue", "nf" to "Norfolk Island", "mp" to "Northern Mariana Islands", "no" to "Norway", "om" to "Oman",
+        "pk" to "Pakistan", "pw" to "Palau", "ps" to "Palestinian Territory, Occupied", "pa" to "Panama", "pg" to "Papua New Guinea",
+        "py" to "Paraguay", "pe" to "Peru", "ph" to "Philippines", "pn" to "Pitcairn", "pl" to "Poland",
+        "pt" to "Portugal", "pr" to "Puerto Rico", "qa" to "Qatar", "re" to "Reunion", "ro" to "Romania",
+        "ru" to "Russian Federation", "rw" to "Rwanda", "sh" to "Saint Helena", "kn" to "Saint Kitts and Nevis", "lc" to "Saint Lucia",
+        "pm" to "Saint Pierre and Miquelon", "vc" to "Saint Vincent and The Grenadines", "ws" to "Samoa", "sm" to "San Marino", "st" to "Sao Tome and Principe",
+        "sa" to "Saudi Arabia", "sn" to "Senegal", "cs" to "Serbia and Montenegro", "sc" to "Seychelles", "sl" to "Sierra Leone",
+        "sg" to "Singapore", "sk" to "Slovakia", "si" to "Slovenia", "sb" to "Solomon Islands", "so" to "Somalia",
+        "za" to "South Africa", "gs" to "South Georgia and The South Sandwich Islands", "es" to "Spain", "lk" to "Sri Lanka", "sd" to "Sudan",
+        "sr" to "Suriname", "sj" to "Svalbard and Jan Mayen", "sz" to "Swaziland", "se" to "Sweden", "ch" to "Switzerland",
+        "sy" to "Syrian Arab Republic", "tw" to "Taiwan, Province of China", "tj" to "Tajikistan", "tz" to "Tanzania, United Republic of", "th" to "Thailand",
+        "tl" to "Timor-leste", "tg" to "Togo", "tk" to "Tokelau", "to" to "Tonga", "tt" to "Trinidad and Tobago",
+        "tn" to "Tunisia", "tr" to "Turkey", "tm" to "Turkmenistan", "tc" to "Turks and Caicos Islands", "tv" to "Tuvalu",
+        "ug" to "Uganda", "ua" to "Ukraine", "ae" to "United Arab Emirates", "uk" to "United Kingdom", "us" to "United States",
+        "um" to "United States Minor Outlying Islands", "uy" to "Uruguay", "uz" to "Uzbekistan", "vu" to "Vanuatu", "ve" to "Venezuela",
+        "vn" to "Viet Nam", "vg" to "Virgin Islands, British", "vi" to "Virgin Islands, U.S.", "wf" to "Wallis and Futuna", "eh" to "Western Sahara",
+        "ye" to "Yemen", "zm" to "Zambia", "zw" to "Zimbabwe"
+    )
+
+    var searchQuery by remember { mutableStateOf("") }
+    val filtered = remember(searchQuery) {
+        if (searchQuery.isEmpty()) countries
+        else countries.filter { it.second.contains(searchQuery, ignoreCase = true) }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Subscribe to Countries") },
+        text = {
+            Column {
+                TextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("Search country...") },
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                )
+                LazyColumn(modifier = Modifier.height(400.dp)) {
+                    items(filtered) { (code, name) ->
+                        ListItem(
+                            headlineContent = { Text(name) },
+                            supportingContent = { Text(code.uppercase()) },
+                            modifier = Modifier.clickable { onSelect(code) }
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } }
+    )
 }
 
 @Composable
