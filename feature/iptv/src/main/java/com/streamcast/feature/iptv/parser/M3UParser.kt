@@ -48,9 +48,12 @@ object M3UParser {
             } else if (!trimmed.startsWith("#")) {
                 // This is the URL line
                 if (currentName != null) {
+                    // Unique, deterministic ID to prevent duplicates in DB and scrolling crashes
+                    val channelId = UUID.nameUUIDFromBytes((trimmed + currentName).toByteArray()).toString()
+                    
                     channels.add(
                         Channel(
-                            id = UUID.randomUUID().toString(),
+                            id = channelId,
                             sourceId = sourceId,
                             name = currentName,
                             logoUrl = currentLogo,

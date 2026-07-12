@@ -164,9 +164,30 @@ class IptvViewModel @Inject constructor(
         channels.filter { it.sourceId == "user_live_streams" }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // Temporarily disabled to debug crash
-    fun resumeHealthChecks() {}
-    fun pauseHealthChecks() {}
+    private var healthCheckJob: Job? = null
+
+    // Restore health checks with ultra-gentle logic to avoid Android 10 scroll crashes
+    fun pauseHealthChecks() {
+        healthCheckJob?.cancel()
+    }
+
+    fun resumeHealthChecks() {
+        if (healthCheckJob?.isActive == true) return
+        healthCheckJob = viewModelScope.launch {
+            allChannels.collect { channels ->
+                delay(5000) // Wait 5s after any list change before pinging
+                
+                // Prioritize channels the user is actually seeing on screen
+                val prioritised = filteredChannels.value.filter { it.lastCheckStatus == 0 }.take(2)
+                val others = channels.filter { it.lastCheckStatus == 0 }.take(2 - prioritised.size)
+                
+                (prioritised + others).forEach {
+                    repository.checkChannelHealth(it)
+                    delay(2000) // 2 second pause between pings to keep main thread free
+                }
+            }
+        }
+    }
 
     private suspend fun preloadDefaults() {
         val defaultSources = listOf(

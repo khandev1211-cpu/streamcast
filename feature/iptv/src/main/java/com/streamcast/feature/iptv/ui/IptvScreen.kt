@@ -56,6 +56,13 @@ fun IptvScreen(
     var showAddSourceDialog by remember { mutableStateOf(false) }
     var isSearching by remember { mutableStateOf(false) }
 
+    DisposableEffect(Unit) {
+        viewModel.resumeHealthChecks()
+        onDispose {
+            viewModel.pauseHealthChecks()
+        }
+    }
+
     Scaffold(
         topBar = {
             Column {
@@ -246,7 +253,14 @@ fun ChannelList(channels: List<Channel>, onChannelClick: (MediaSource, List<Medi
             ChannelItem(channel) { 
                 viewModel.preparePlaylist(channels)
                 viewModel.markAsPlayed(channel.id)
-                onChannelClick(MediaSource(channel.id, android.net.Uri.parse(channel.streamUrl), SourceType.IPTV, channel.name, false, headers = channel.headers), emptyList())
+                onChannelClick(MediaSource(
+                    id = channel.id, 
+                    uri = android.net.Uri.parse(channel.streamUrl), 
+                    type = SourceType.IPTV, 
+                    displayName = channel.name, 
+                    isCacheable = false, 
+                    headers = channel.headers
+                ), emptyList())
             }
         }
     }
