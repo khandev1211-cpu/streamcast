@@ -141,6 +141,8 @@ class IptvPlayerViewModel @Inject constructor(
                     customHeaders["Referer"] = "https://live.arydigital.tv/"
                 } else if (uriStr.contains("mjunoon")) {
                     customHeaders["Referer"] = "https://www.mjunoon.tv/"
+                } else if (uriStr.contains("103.250") || uriStr.contains("121.91") || uriStr.contains("115.42")) {
+                    customHeaders["Referer"] = "http://www.ptvsports.pk/"
                 }
             }
             "TiviMate Pro" -> {
@@ -154,8 +156,8 @@ class IptvPlayerViewModel @Inject constructor(
             }
             "Sports Boost" -> {
                 customHeaders["User-Agent"] = "VLC/3.0.11 LibVLC/3.0.11"
-                if (uriStr.contains("103.250") || uriStr.contains("121.91") || uriStr.contains("103.213")) {
-                    // These are common PK headend IPs (PTV/Ten) - They often need specific referers
+                if (uriStr.contains("103.250") || uriStr.contains("121.91") || uriStr.contains("103.213") || uriStr.contains("115.42")) {
+                    // These are common PK headend IPs (PTV/Ten/8XM)
                     customHeaders["Referer"] = "http://ptvsports.com.pk/"
                     customHeaders["Origin"] = "http://ptvsports.com.pk"
                 } else {
