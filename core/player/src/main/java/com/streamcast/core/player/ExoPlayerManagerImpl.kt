@@ -22,6 +22,7 @@ import javax.inject.Singleton
 
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 
 @Singleton
@@ -52,6 +53,8 @@ class ExoPlayerManagerImpl @Inject constructor(
             val baseHttpFactory = DefaultHttpDataSource.Factory()
                 .setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
                 .setAllowCrossProtocolRedirects(true)
+                .setConnectTimeoutMs(15000) // 15s timeout for slower servers
+                .setReadTimeoutMs(15000)
 
             // Custom DataSource.Factory to handle per-stream headers
             val dataSourceFactory = androidx.media3.datasource.DataSource.Factory {
@@ -66,8 +69,19 @@ class ExoPlayerManagerImpl @Inject constructor(
                 dataSource
             }
 
+            // Optimized LoadControl for unreliable live streams
+            val loadControl = DefaultLoadControl.Builder()
+                .setBufferDurationsMs(
+                    15000, // Min buffer 15s
+                    50000, // Max buffer 50s
+                    2500,  // Buffer for playback 2.5s
+                    5000   // Buffer for playback after re-buffer 5s
+                )
+                .build()
+
             ExoPlayer.Builder(context)
                 .setMediaSourceFactory(DefaultMediaSourceFactory(context).setDataSourceFactory(dataSourceFactory))
+                .setLoadControl(loadControl)
                 .setAudioAttributes(
                     AudioAttributes.Builder()
                         .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)

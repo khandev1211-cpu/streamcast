@@ -113,7 +113,7 @@ class IptvPlayerViewModel @Inject constructor(
     }
 
     fun cycleUserAgent() {
-        val profiles = listOf("Default", "Android TV", "iPhone", "Samsung TV", "JioTV", "Pakistan Zap", "Sports Pro")
+        val profiles = listOf("Default", "Android TV", "iPhone", "Samsung TV", "JioTV", "Pakistan Zap", "TiviMate Pro", "Sports Pro")
         val nextIndex = (profiles.indexOf(_userAgentProfile.value) + 1) % profiles.size
         _userAgentProfile.value = profiles[nextIndex]
         // Reload current channel with new UA
@@ -134,11 +134,15 @@ class IptvPlayerViewModel @Inject constructor(
                 customHeaders["Referer"] = "https://www.jiotv.com/"
             }
             "Pakistan Zap" -> {
-                customHeaders["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-                // If it's ARY, it might need its specific referer if not already in M3U
+                customHeaders["User-Agent"] = "VLC/3.0.11 LibVLC/3.0.11" // VLC is widely trusted by PK headends
                 if (mediaSource.uri.toString().contains("aryzap") || mediaSource.uri.toString().contains("5centscdn")) {
                     customHeaders["Referer"] = "https://live.arydigital.tv/"
+                } else if (mediaSource.uri.toString().contains("mjunoon")) {
+                    customHeaders["Referer"] = "https://www.mjunoon.tv/"
                 }
+            }
+            "TiviMate Pro" -> {
+                customHeaders["User-Agent"] = "TiviMate/4.7.0 (Linux; Android 11)"
             }
             "Sports Pro" -> {
                 customHeaders["User-Agent"] = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
