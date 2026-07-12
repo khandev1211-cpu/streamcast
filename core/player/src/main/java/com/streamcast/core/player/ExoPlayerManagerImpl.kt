@@ -21,6 +21,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -60,28 +61,45 @@ class ExoPlayerManagerImpl @Inject constructor(
                 .build()
 
             val dataSourceFactory = androidx.media3.datasource.DataSource.Factory {
-                val dataSource = OkHttpDataSource.Factory(okHttpClient)
-                    .setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-                    .createDataSource()
-                
                 val source = currentMediaSource
-                if (source?.headers?.isNotEmpty() == true) {
-                    android.util.Log.d("ExoPlayerManager", "Applying headers for ${source.displayName}: ${source.headers}")
-                    source.headers.forEach { (key, value) ->
-                        dataSource.setRequestProperty(key, value)
+                val uri = source?.uri
+                
+                when {
+                    uri?.scheme == "rtmp" -> {
+                        androidx.media3.datasource.rtmp.RtmpDataSource.Factory().createDataSource()
+                    }
+                    uri?.scheme == "file" || uri?.scheme == "content" || uri?.path?.startsWith("/storage") == true -> {
+                        DefaultDataSource.Factory(context).createDataSource()
+                    }
+                    else -> {
+                        val dataSource = OkHttpDataSource.Factory(okHttpClient)
+                            .setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                            .createDataSource()
+                        
+                        // Apply per-stream custom headers
+                        source?.headers?.forEach { (key, value) ->
+                            dataSource.setRequestProperty(key, value)
+                        }
+
+                        // Auto-apply VLC headers for common PK headends (ports 8000, 9981)
+                        if (uri?.port == 8000 || uri?.port == 9981) {
+                            dataSource.setRequestProperty("User-Agent", "VLC/3.0.11 LibVLC/3.0.11")
+                        }
+
+                        dataSource
                     }
                 }
-                dataSource
             }
 
             // Optimized LoadControl for unreliable live streams
             val loadControl = DefaultLoadControl.Builder()
                 .setBufferDurationsMs(
-                    20000, // Min buffer 20s
-                    60000, // Max buffer 60s
-                    3000,  // Buffer for playback 3s
-                    6000   // Buffer for playback after re-buffer 6s
+                    15000, // Min buffer 15s
+                    50000, // Max buffer 50s
+                    1500,  // Buffer for playback 1.5s (Faster start)
+                    3000   // Buffer for playback after re-buffer 3s
                 )
+                .setPrioritizeTimeOverSizeThresholds(true)
                 .build()
 
             ExoPlayer.Builder(context)
@@ -120,18 +138,11 @@ class ExoPlayerManagerImpl @Inject constructor(
                 .setMediaId(source.id)
                 .setTag(source)
 
-            // Explicitly set mime types for IPTV/Live if it's a known format
             val uriString = source.uri.toString()
             when {
                 uriString.contains(".m3u8") -> builder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_M3U8)
                 uriString.contains(".mpd") -> builder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_MPD)
             }
-            
-            // Set custom headers if provided by the source
-            // We'll pass them in the tag so the DataSourceFactory can extract them if needed,
-            // or we use RequestMetadata (some data sources support this)
-            // Builder doesn't have a direct setHeaders. 
-            // One way is using MediaItem.Builder.setMediaMetadata or setTag.
             
             builder.build()
         }

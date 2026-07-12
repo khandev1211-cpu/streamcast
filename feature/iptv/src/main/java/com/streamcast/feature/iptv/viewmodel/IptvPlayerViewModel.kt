@@ -113,7 +113,7 @@ class IptvPlayerViewModel @Inject constructor(
     }
 
     fun cycleUserAgent() {
-        val profiles = listOf("Default", "Android TV", "iPhone", "Samsung TV", "JioTV", "Pakistan Zap", "TiviMate Pro", "Sports Pro", "Ultra Sports")
+        val profiles = listOf("Default", "Android TV", "iPhone", "Samsung TV", "JioTV", "Pakistan Zap", "TiviMate Pro", "Smarters Pro", "Xtream Pro", "Sports Boost", "Sports Pro", "Ultra Sports")
         val nextIndex = (profiles.indexOf(_userAgentProfile.value) + 1) % profiles.size
         _userAgentProfile.value = profiles[nextIndex]
         // Reload current channel with new UA
@@ -125,6 +125,8 @@ class IptvPlayerViewModel @Inject constructor(
         
         // Apply UA Profile
         val customHeaders = mediaSource.headers?.toMutableMap() ?: mutableMapOf()
+        val uriStr = mediaSource.uri.toString()
+
         when (_userAgentProfile.value) {
             "Android TV" -> customHeaders["User-Agent"] = "AndroidTV/1.0 (Google; Pixel TV)"
             "iPhone" -> customHeaders["User-Agent"] = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
@@ -135,14 +137,30 @@ class IptvPlayerViewModel @Inject constructor(
             }
             "Pakistan Zap" -> {
                 customHeaders["User-Agent"] = "VLC/3.0.11 LibVLC/3.0.11" // VLC is widely trusted by PK headends
-                if (mediaSource.uri.toString().contains("aryzap") || mediaSource.uri.toString().contains("5centscdn")) {
+                if (uriStr.contains("aryzap") || uriStr.contains("5centscdn")) {
                     customHeaders["Referer"] = "https://live.arydigital.tv/"
-                } else if (mediaSource.uri.toString().contains("mjunoon")) {
+                } else if (uriStr.contains("mjunoon")) {
                     customHeaders["Referer"] = "https://www.mjunoon.tv/"
                 }
             }
             "TiviMate Pro" -> {
                 customHeaders["User-Agent"] = "TiviMate/4.7.0 (Linux; Android 11)"
+            }
+            "Smarters Pro" -> {
+                customHeaders["User-Agent"] = "IPTVSmartersPlayer/3.0.0 (Linux; Android 12)"
+            }
+            "Xtream Pro" -> {
+                customHeaders["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) IPTV/1.0"
+            }
+            "Sports Boost" -> {
+                customHeaders["User-Agent"] = "VLC/3.0.11 LibVLC/3.0.11"
+                if (uriStr.contains("103.250") || uriStr.contains("121.91") || uriStr.contains("103.213")) {
+                    // These are common PK headend IPs (PTV/Ten) - They often need specific referers
+                    customHeaders["Referer"] = "http://ptvsports.com.pk/"
+                    customHeaders["Origin"] = "http://ptvsports.com.pk"
+                } else {
+                    customHeaders["Referer"] = "https://www.espn.com/"
+                }
             }
             "Sports Pro" -> {
                 customHeaders["User-Agent"] = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"

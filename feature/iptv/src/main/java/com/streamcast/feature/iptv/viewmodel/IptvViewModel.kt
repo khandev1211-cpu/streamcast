@@ -85,14 +85,20 @@ class IptvViewModel @Inject constructor(
     ) { channels, query, category, country ->
         channels.filter { channel ->
             val matchesQuery = query.isEmpty() || channel.name.contains(query, ignoreCase = true)
-            // If searching, ignore category filter. Otherwise, check match.
+            
+            // Auto-detect sports if not categorized
+            val isSportsByName = channel.name.contains("Sports", ignoreCase = true) || 
+                               channel.name.contains("Ten Sports", ignoreCase = true) ||
+                               channel.name.contains("PTV Sports", ignoreCase = true)
+
             val matchesCategory = query.isNotEmpty() || 
                                  category == null || 
                                  category == "All" || 
                                  category == "All Channels" || 
                                  category == "Favorites" || 
                                  category == "Recently Played" || 
-                                 channel.category == category
+                                 channel.category == category ||
+                                 (category == "Sports" && isSportsByName)
             
             val matchesCountry = when (country) {
                 null -> true
