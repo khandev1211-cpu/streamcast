@@ -1,53 +1,88 @@
-# StreamCast (working name) — Universal Media, IPTV & Live Player with AI Subtitles
+# 🎥 StreamCast: The Ultimate Unified Media Experience
 
-A modern Android app unifying local video/audio playback, IPTV (M3U/Xtream), and user-added live streams — with its standout feature: **on-demand AI-generated subtitles in any language**, powered by a Whisper Large backend.
+[![Android Build](https://github.com/khandev1211-cpu/streamcast/actions/workflows/android.yml/badge.svg)](https://github.com/khandev1211-cpu/streamcast/actions/workflows/android.yml)
+[![Version](https://img.shields.io/badge/version-v1.0.0--beta-blue.svg)](https://github.com/khandev1211-cpu/streamcast)
+[![Platform](https://img.shields.io/badge/platform-Android-brightgreen.svg)](https://developer.android.com)
+[![Kotlin](https://img.shields.io/badge/kotlin-1.9.22-purple.svg)](https://kotlinlang.org)
 
-> **Design/UX reference: MX Player.** Layout, gestures, and player feature depth are built to closely match MX Player's — see `docs/25-MX-PLAYER-FEATURE-PARITY.md` for the full checklist. Branding, logo, and source code are original; only the interaction patterns and feature set are matched.
+**StreamCast** is a pro-grade, unified media player for Android designed with the premium UX of MX Player and the power of modern AI. It seamlessly integrates local media playback, global IPTV, and live streams into a single, high-performance application.
 
-> Windows support is planned for a later phase as a fully separate native build — no shared codebase with Android in the current plan.
+---
 
-## Quick Summary
+## 🌟 Key Features
 
-- **Playback engine**: Media3/ExoPlayer, handling Video (local), Audio (local), IPTV, and Live streams through one unified pipeline.
-- **UI Organization**: Bottom navigation with four primary destinations: Video, Audio, IPTV, and Profile.
-- **AI Subtitles**: transcription + translation into any target language via a Whisper Large API, in both one-shot (local files, cached) and rolling (IPTV/live, near-real-time) modes.
-- **Stack**: Kotlin, Jetpack Compose, Media3, Room, Hilt, Retrofit, Coroutines/Flow — see full rationale in the docs.
+### 📡 Advanced IPTV & Live Streaming
+- **Multi-Source Support**: Full compatibility with M3U playlists, M3U8 links, and Xtream Codes API.
+- **Smart Reliability**: Built-in "Auto-Skip" for dead links and background "Health Checks" (Green/Red indicators).
+- **Pro Player Profiles**: Specialized User-Agent profiles (VLC, TiviMate, JioTV, Pakistan Zap) to unlock restricted streams.
+- **EPG Integration**: Real-time TV Guide with program progress tracking.
+- **Global Discovery**: "Browse by Country" system supporting 200+ regions.
 
-## Full Documentation Index
+### 🎬 Professional Local Player
+- **MX Player Style UX**: Intuitive central gesture overlays for Volume, Brightness, and Seeking.
+- **High-Performance Engine**: Powered by Media3/ExoPlayer with optimized hardware acceleration.
+- **Advanced Controls**: Support for A-B Repeat, Sleep Timer, and precise Resize Modes (Fit, Fill, Zoom, Stretch).
 
-| # | Document | Covers |
-|---|---|---|
-| 01 | [OVERVIEW](docs/01-OVERVIEW.md) | What this project is, guiding principles, scope |
-| 02 | [FEATURES](docs/02-FEATURES.md) | Full feature spec — MVP, later phases, out of scope |
-| 03 | [ARCHITECTURE](docs/03-ARCHITECTURE.md) | System architecture, modules, data flow |
-| 04 | [TECH STACK](docs/04-TECH-STACK.md) | Every library/tool choice and why |
-| 05 | [PROJECT STRUCTURE](docs/05-PROJECT-STRUCTURE.md) | Repo/module/package layout |
-| 06 | [PLAYBACK ENGINE](docs/06-PLAYBACK-ENGINE.md) | Media3/ExoPlayer integration deep dive |
-| 07 | [IPTV INTEGRATION](docs/07-IPTV-INTEGRATION.md) | M3U, Xtream Codes, EPG parsing |
-| 08 | [LIVE STREAMS](docs/08-LIVE-STREAMS.md) | User-added HLS/DASH/RTMP URL handling |
-| 09 | [SUBTITLE PIPELINE](docs/09-SUBTITLE-PIPELINE.md) | End-to-end AI subtitle generation flow |
-| 10 | [SUBTITLE BACKEND SETUP](docs/10-VPS-WHISPER-SETUP.md) | Whisper Large API setup guide |
-| 11 | [TRANSLATION STRATEGY](docs/11-TRANSLATION-STRATEGY.md) | Handling non-English subtitle targets |
-| 12 | [DATABASE SCHEMA](docs/12-DATABASE-SCHEMA.md) | Room entities, DAOs, relationships |
-| 13 | [NETWORKING & API CONTRACTS](docs/13-NETWORKING-API-CONTRACTS.md) | Backend API contract, IPTV/EPG networking |
-| 14 | [UI/UX DESIGN SYSTEM](docs/14-UI-UX-DESIGN-SYSTEM.md) | Visual design, color, typography, motion |
-| 15 | [NAVIGATION & SCREENS](docs/15-NAVIGATION-SCREENS.md) | Full screen inventory, nav graph |
-| 16 | [STATE MANAGEMENT](docs/16-STATE-MANAGEMENT.md) | ViewModel/state patterns, subtitle state machine |
-| 17 | [ERROR HANDLING & LOGGING](docs/17-ERROR-HANDLING-LOGGING.md) | Error categories, messaging, logging strategy |
-| 18 | [PERFORMANCE OPTIMIZATION](docs/18-PERFORMANCE-OPTIMIZATION.md) | Playback, subtitle latency, battery/data, Compose perf |
-| 19 | [SECURITY & PRIVACY](docs/19-SECURITY-PRIVACY.md) | Credential storage, TLS, permissions, privacy |
-| 20 | [TESTING STRATEGY](docs/20-TESTING-STRATEGY.md) | Unit/integration/UI/manual testing approach |
-| 21 | [CI/CD & BUILD](docs/21-CI-CD-BUILD.md) | Build variants, pipeline, release process |
-| 22 | [ROADMAP](docs/22-ROADMAP.md) | Phased build plan, Android first then Windows |
-| 23 | [WINDOWS FUTURE PLAN](docs/23-WINDOWS-FUTURE-PLAN.md) | Later-phase Windows app thinking |
-| 24 | [GLOSSARY](docs/24-GLOSSARY.md) | Terms and acronyms used throughout |
-| 25 | [MX PLAYER FEATURE PARITY](docs/25-MX-PLAYER-FEATURE-PARITY.md) | Feature-by-feature checklist matching MX Player's UX and capabilities |
+### 🤖 AI-Powered Capabilities (Experimental)
+- **AI Subtitles**: On-demand transcription and translation using Whisper Large API.
+- **Smart Headers**: Automatic security header injection to bypass geo-blocking.
 
-## Platform Plan
+---
 
-- **Phase 1 (now → MVP):** Android — Kotlin, Jetpack Compose, Media3
-- **Phase 2 (later):** Windows — separate native app, stack decided closer to that phase
+## 🛠️ Tech Stack
 
-## Status
+- **UI**: Jetpack Compose (Modern, Declarative UI)
+- **Engine**: Media3 / ExoPlayer (Industry standard playback)
+- **Database**: Room (Offline caching and history)
+- **Dependency Injection**: Hilt / Dagger
+- **Networking**: OkHttp3 & Retrofit (High-speed stream handling)
+- **Asynchronous**: Kotlin Coroutines & Flow
 
-📋 Planning / architecture stage — this documentation set is the foundation before development starts. No application code has been written yet.
+---
+
+## 📂 Project Structure
+
+The project follows a modular Clean Architecture:
+- `:app`: Entry point and navigation.
+- `:feature:iptv`: Complete IPTV logic, parsing, and folder management.
+- `:feature:library`: Local video/audio management and playback.
+- `:core:player`: Low-level Media3 implementation and network interceptors.
+- `:core:database`: Local storage schema and DAO implementation.
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Android Studio Iguana or newer.
+- Android SDK Level 34+.
+- Real device running Android 8.0 (Oreo) to Android 14 (U) recommended.
+
+### Installation
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/khandev1211-cpu/streamcast.git
+   ```
+2. Open in Android Studio.
+3. Sync Gradle and run on your device.
+
+---
+
+## 📑 Documentation
+
+Detailed guides are available in the [docs/](docs/) folder:
+- [Architecture Deep Dive](docs/03-ARCHITECTURE.md)
+- [IPTV Integration Guide](docs/07-IPTV-INTEGRATION.md)
+- [MX Player Parity Checklist](docs/25-MX-PLAYER-FEATURE-PARITY.md)
+
+---
+
+## 🤝 Contribution
+
+We welcome contributions! Please feel free to submit Pull Requests or open Issues for stream link compatibility or UI improvements.
+
+---
+
+## 📜 License
+
+StreamCast is developed by **khandev1211-cpu**. All rights reserved.
