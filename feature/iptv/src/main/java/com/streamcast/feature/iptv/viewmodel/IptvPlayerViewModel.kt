@@ -113,7 +113,7 @@ class IptvPlayerViewModel @Inject constructor(
     }
 
     fun cycleUserAgent() {
-        val profiles = listOf("Default", "Android TV", "iPhone", "Samsung TV", "JioTV", "Pakistan Zap", "TiviMate Pro", "Sports Pro")
+        val profiles = listOf("Default", "Android TV", "iPhone", "Samsung TV", "JioTV", "Pakistan Zap", "TiviMate Pro", "Sports Pro", "Ultra Sports")
         val nextIndex = (profiles.indexOf(_userAgentProfile.value) + 1) % profiles.size
         _userAgentProfile.value = profiles[nextIndex]
         // Reload current channel with new UA
@@ -147,6 +147,10 @@ class IptvPlayerViewModel @Inject constructor(
             "Sports Pro" -> {
                 customHeaders["User-Agent"] = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
                 customHeaders["Referer"] = "https://www.espn.com/"
+            }
+            "Ultra Sports" -> {
+                customHeaders["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+                customHeaders["Origin"] = "https://www.google.com"
             }
         }
         

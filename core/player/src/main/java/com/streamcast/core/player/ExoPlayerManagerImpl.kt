@@ -21,9 +21,11 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import okhttp3.OkHttpClient
+import java.util.concurrent.TimeUnit
 
 @Singleton
 class ExoPlayerManagerImpl @Inject constructor(
@@ -50,15 +52,18 @@ class ExoPlayerManagerImpl @Inject constructor(
     @UnstableApi
     private fun ensurePlayer(): ExoPlayer {
         return exoPlayer ?: run {
-            val baseHttpFactory = DefaultHttpDataSource.Factory()
-                .setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-                .setAllowCrossProtocolRedirects(true)
-                .setConnectTimeoutMs(15000) // 15s timeout for slower servers
-                .setReadTimeoutMs(15000)
+            val okHttpClient = OkHttpClient.Builder()
+                .connectTimeout(20, TimeUnit.SECONDS)
+                .readTimeout(20, TimeUnit.SECONDS)
+                .followRedirects(true)
+                .followSslRedirects(true)
+                .build()
 
-            // Custom DataSource.Factory to handle per-stream headers
             val dataSourceFactory = androidx.media3.datasource.DataSource.Factory {
-                val dataSource = baseHttpFactory.createDataSource()
+                val dataSource = OkHttpDataSource.Factory(okHttpClient)
+                    .setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                    .createDataSource()
+                
                 val source = currentMediaSource
                 if (source?.headers?.isNotEmpty() == true) {
                     android.util.Log.d("ExoPlayerManager", "Applying headers for ${source.displayName}: ${source.headers}")
@@ -72,10 +77,10 @@ class ExoPlayerManagerImpl @Inject constructor(
             // Optimized LoadControl for unreliable live streams
             val loadControl = DefaultLoadControl.Builder()
                 .setBufferDurationsMs(
-                    15000, // Min buffer 15s
-                    50000, // Max buffer 50s
-                    2500,  // Buffer for playback 2.5s
-                    5000   // Buffer for playback after re-buffer 5s
+                    20000, // Min buffer 20s
+                    60000, // Max buffer 60s
+                    3000,  // Buffer for playback 3s
+                    6000   // Buffer for playback after re-buffer 6s
                 )
                 .build()
 
@@ -245,9 +250,9 @@ class ExoPlayerManagerImpl @Inject constructor(
             androidx.media3.common.PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS -> {
                 val cause = error.cause as? androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException
                 when (cause?.responseCode) {
-                    403 -> "Geo-blocked: You might need a VPN for this channel."
-                    404 -> "Link Expired: The provider has moved this stream."
-                    500, 503 -> "Server Error: The provider's server is currently down."
+                    403 -> "Access Denied (403): Often due to geo-blocking or missing tokens. Try 'Sports Pro' profile."
+                    404 -> "Not Found (404): The stream link has expired or moved."
+                    500, 503 -> "Server Offline: The provider's server is currently down."
                     else -> "Network Error: ${cause?.responseCode ?: "Unknown status"}"
                 }
             }

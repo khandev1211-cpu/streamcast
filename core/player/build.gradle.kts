@@ -38,6 +38,7 @@ dependencies {
     implementation(libs.androidx.media3.ui)
     implementation(libs.androidx.media3.session)
     implementation(libs.androidx.media3.datasource.rtmp)
+    implementation(libs.androidx.media3.datasource.okhttp)
     
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
