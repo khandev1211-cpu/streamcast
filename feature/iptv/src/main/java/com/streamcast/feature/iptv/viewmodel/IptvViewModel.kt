@@ -240,6 +240,10 @@ class IptvViewModel @Inject constructor(
             repository.addSource(it)
             repository.refreshSource(it.id)
         }
+        
+        // Add specific working PTV Sports link to Live tab for testing
+        addLiveStream("PTV Sports (Premium)", "https://tvsen5.aynaott.com/Ptvsports/index.m3u8")
+        addLiveStream("Ten Sports (Premium)", "http://121.91.61.106:8000/play/a04h/index.m3u8")
     }
 
     fun addXtreamSource(name: String, host: String, user: String, pass: String) {
