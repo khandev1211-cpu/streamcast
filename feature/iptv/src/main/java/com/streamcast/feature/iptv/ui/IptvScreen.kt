@@ -283,17 +283,13 @@ fun SearchTopBar(query: String, onQueryChange: (String) -> Unit, onClose: () -> 
 fun ChannelItem(channel: Channel, onClick: () -> Unit) {
     ListItem(
         headlineContent = { 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(channel.name, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Box(modifier = Modifier.size(8.dp).background(if (channel.lastCheckStatus == 1) Color.Green else if (channel.lastCheckStatus == 2) Color.Red else Color.Gray, CircleShape))
-            }
+            Text(channel.name, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
         },
-        supportingContent = { Text(listOfNotNull(channel.category, channel.country?.uppercase()).joinToString(" • "), fontSize = 12.sp) },
+        supportingContent = { 
+            Text(channel.category ?: "No category", fontSize = 12.sp)
+        },
         leadingContent = {
-            Surface(modifier = Modifier.size(40.dp), shape = MaterialTheme.shapes.small, color = Color.Gray.copy(alpha = 0.2f)) {
-                if (channel.logoUrl != null) AsyncImage(channel.logoUrl, null, modifier = Modifier.fillMaxSize())
-                else Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Tv, null, modifier = Modifier.size(24.dp)) }
-            }
+            Icon(Icons.Default.Tv, contentDescription = null, modifier = Modifier.size(24.dp))
         },
         modifier = Modifier.clickable { onClick() }
     )

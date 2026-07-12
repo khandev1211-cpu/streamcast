@@ -140,12 +140,7 @@ class IptvRepository @Inject constructor(
                 source.playlistUrl?.let { url ->
                     try {
                         val content = apiClient.fetchRawPlaylist(url)
-                        // Try to guess country from URL (e.g., .../countries/in.m3u)
-                        val country = if (url.contains("/countries/")) {
-                            url.substringAfterLast("/").substringBefore(".m3u")
-                        } else null
-                        
-                        val channels = M3UParser.parse(content, source.id, defaultCountry = country)
+                        val channels = M3UParser.parse(content, source.id)
                         channelDao.upsertAll(channels)
                     } catch (e: Exception) {
                         e.printStackTrace()

@@ -55,20 +55,6 @@ class IptvViewModel @Inject constructor(
     init {
         // Combined init logic
         viewModelScope.launch {
-            // 1. Generate Mock EPG off-thread
-            val currentTime = System.currentTimeMillis()
-            val mockPrograms = mutableListOf<EpgProgram>()
-            repository.getAllChannels().first().take(20).forEach { channel ->
-                 mockPrograms.add(EpgProgram(
-                    channelId = channel.id,
-                    title = "Current: ${channel.name} Special",
-                    description = "Watching live broadcast.",
-                    startTime = currentTime - 1800000,
-                    endTime = currentTime + 1800000
-                ))
-            }
-            epgDao.insertAll(mockPrograms)
-
             // 2. Preload defaults if empty
             repository.getSources().first().let { list ->
                 if (list.isEmpty()) {
@@ -76,6 +62,10 @@ class IptvViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    private fun generateMockEpg() {
+        // Disabled to prevent main thread pressure
     }
 
     val filteredChannels: StateFlow<List<Channel>> = combine(
