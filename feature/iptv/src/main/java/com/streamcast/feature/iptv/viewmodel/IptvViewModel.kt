@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -120,7 +121,9 @@ class IptvViewModel @Inject constructor(
             channels.groupBy { it.category ?: "Uncategorized" }
                 .map { (name, list) -> IptvCategory(name, list.size) }
                 .sortedBy { it.name }
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        }
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val liveFolders = categoryFolders.map { list ->
         list.filter { 
@@ -128,28 +131,28 @@ class IptvViewModel @Inject constructor(
             !it.name.startsWith("Series:") && 
             !it.name.contains("Sports", ignoreCase = true) 
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }.distinctUntilChanged().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val sportsFolders = categoryFolders.map { list ->
         list.filter { it.name.contains("Sports", ignoreCase = true) }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }.distinctUntilChanged().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val movieFolders = categoryFolders.map { list ->
         list.filter { it.name.startsWith("Movies:") }
             .map { it.copy(name = it.name.removePrefix("Movies: ")) }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }.distinctUntilChanged().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val seriesFolders = categoryFolders.map { list ->
         list.filter { it.name.startsWith("Series:") }
             .map { it.copy(name = it.name.removePrefix("Series: ")) }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }.distinctUntilChanged().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val countryFolders: StateFlow<List<IptvCategory>> = allChannels.map { channels ->
         if (channels.isEmpty()) return@map emptyList()
         channels.groupBy { it.country ?: "Unknown" }
             .map { (name, list) -> IptvCategory(name, list.size) }
             .sortedBy { it.name }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }.distinctUntilChanged().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val favoriteChannels = repository.getFavorites()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
