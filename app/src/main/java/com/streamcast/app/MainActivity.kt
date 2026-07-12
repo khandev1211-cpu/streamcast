@@ -38,6 +38,14 @@ import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    override fun onGenericMotionEvent(event: android.view.MotionEvent): Boolean {
+        // Ultimate fix for ACTION_HOVER_EXIT crash on Android 10 devices
+        if (event.action == android.view.MotionEvent.ACTION_HOVER_EXIT) {
+            return true
+        }
+        return super.onGenericMotionEvent(event)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {

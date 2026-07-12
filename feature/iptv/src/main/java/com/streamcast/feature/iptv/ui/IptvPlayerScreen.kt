@@ -11,9 +11,7 @@ import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.items
@@ -27,6 +25,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -44,7 +43,9 @@ import com.streamcast.core.database.entities.Channel
 import com.streamcast.core.player.MediaSource
 import com.streamcast.core.player.PlaybackState
 import com.streamcast.feature.iptv.viewmodel.IptvPlayerViewModel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 fun openExternalPlayer(context: Context, mediaSource: MediaSource) {
@@ -55,7 +56,6 @@ fun openExternalPlayer(context: Context, mediaSource: MediaSource) {
         }
         context.startActivity(Intent.createChooser(intent, "Open with..."))
     } catch (e: Exception) {
-        // Fallback or Toast
     }
 }
 
@@ -102,7 +102,6 @@ fun IptvPlayerScreen(
 
     LaunchedEffect(mediaSource) {
         viewModel.playChannel(mediaSource)
-        // We'll mark as played via a separate ViewModel call or shared logic
     }
 
     LaunchedEffect(showControls) {
@@ -116,41 +115,62 @@ fun IptvPlayerScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null
-            ) {
-                if (showSideList) showSideList = false
-                else showControls = !showControls
-            }
             .pointerInput(Unit) {
-                detectHorizontalDragGestures { _, dragAmount: Float ->
-                    if (dragAmount < -20f && !showSideList) {
-                        showSideList = true
-                        showControls = false
-                    }
-                }
-            }
-            .pointerInput(Unit) {
-                detectVerticalDragGestures(
-                    onDragStart = { offset ->
-                        gestureType = if (offset.x < size.width / 2) "Brightness" else "Volume"
-                    },
-                    onDragEnd = { gestureType = "" },
-                    onVerticalDrag = { _, dragAmount ->
-                        val delta = -dragAmount / 500f
-                        gestureProgress = (gestureProgress + delta).coerceIn(0f, 1f)
-                        if (gestureType == "Volume") {
-                            viewModel.setVolume(gestureProgress * 2.0f)
-                        } else if (gestureType == "Brightness") {
-                            activity?.window?.let { window ->
-                                val params = window.attributes
-                                params.screenBrightness = gestureProgress
-                                window.attributes = params
+                coroutineScope {
+                    awaitEachGesture {
+                        awaitFirstDown(requireUnconsumed = false)
+                        var isDrag = false
+                        var totalDragX = 0f
+                        var totalDragY = 0f
+                        
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val change = event.changes.first()
+                            
+                            if (!change.pressed) {
+                                if (!isDrag) {
+                                    if (showSideList) showSideList = false
+                                    else showControls = !showControls
+                                }
+                                gestureType = ""
+                                break
+                            }
+                            
+                            val dragAmount = change.position - change.previousPosition
+                            totalDragX += dragAmount.x
+                            totalDragY += dragAmount.y
+                            
+                            if (!isDrag && (abs(totalDragX) > 20f || abs(totalDragY) > 20f)) {
+                                isDrag = true
+                                if (abs(totalDragX) > abs(totalDragY)) {
+                                    if (totalDragX < 0 && !showSideList) {
+                                        showSideList = true
+                                        showControls = false
+                                    }
+                                } else {
+                                    gestureType = if (change.position.x < size.width / 2) "Brightness" else "Volume"
+                                }
+                            }
+                            
+                            if (isDrag) {
+                                change.consume()
+                                if (gestureType == "Volume" || gestureType == "Brightness") {
+                                    val delta = -dragAmount.y / 500f
+                                    gestureProgress = (gestureProgress + delta).coerceIn(0f, 1f)
+                                    if (gestureType == "Volume") {
+                                        viewModel.setVolume(gestureProgress * 2.0f)
+                                    } else {
+                                        activity?.window?.let { window ->
+                                            val params = window.attributes
+                                            params.screenBrightness = gestureProgress
+                                            window.attributes = params
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
-                )
+                }
             }
     ) {
         AndroidView(
@@ -475,6 +495,7 @@ fun IptvOverflowMenu(
                         "Audio Tracks" to Icons.Default.MusicNote to onShowTracks,
                         "Subtitles" to Icons.Default.Subtitles to {},
                         "Refresh EPG" to Icons.Default.Refresh to {},
+                        "Add to Favourites" to Icons.Default.Favorite to {},
                         "Sleep Timer" to Icons.Default.Timer to onShowSleepTimer,
                         "Full Settings" to Icons.Default.Settings to {}
                     )
@@ -563,7 +584,7 @@ fun IptvControlsOverlay(
                     Box(
                         modifier = Modifier
                             .size(8.dp)
-                            .background(Color.Red, shape = androidx.compose.foundation.shape.CircleShape)
+                            .background(Color.Red, shape = CircleShape)
                     )
                     Spacer(Modifier.width(4.dp))
                     Text("LIVE", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
