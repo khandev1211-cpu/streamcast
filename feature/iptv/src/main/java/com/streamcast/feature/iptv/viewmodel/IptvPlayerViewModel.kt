@@ -10,6 +10,8 @@ import com.streamcast.core.player.PlayerManager
 import com.streamcast.feature.iptv.data.IptvPlaylistManager
 import com.streamcast.feature.iptv.data.IptvRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -64,6 +66,10 @@ class IptvPlayerViewModel @Inject constructor(
     private val _autoSkipEnabled = MutableStateFlow(true)
     val autoSkipEnabled = _autoSkipEnabled.asStateFlow()
 
+    private val _sleepTimerMillis = MutableStateFlow<Long?>(null)
+    val sleepTimerMillis: StateFlow<Long?> = _sleepTimerMillis.asStateFlow()
+    private var sleepTimerJob: Job? = null
+
     private val sessionBlacklist = mutableSetOf<String>()
 
     init {
@@ -84,6 +90,26 @@ class IptvPlayerViewModel @Inject constructor(
 
     fun toggleAutoSkip() {
         _autoSkipEnabled.value = !_autoSkipEnabled.value
+    }
+
+    fun setSleepTimer(minutes: Int) {
+        sleepTimerJob?.cancel()
+        if (minutes == 0) {
+            _sleepTimerMillis.value = null
+            return
+        }
+        val targetMillis = minutes * 60 * 1000L
+        _sleepTimerMillis.value = targetMillis
+        sleepTimerJob = viewModelScope.launch {
+            var remaining = targetMillis
+            while (remaining > 0) {
+                delay(1000)
+                remaining -= 1000
+                _sleepTimerMillis.value = remaining
+            }
+            pause()
+            _sleepTimerMillis.value = null
+        }
     }
 
     fun cycleUserAgent() {

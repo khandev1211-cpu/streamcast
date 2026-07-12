@@ -83,6 +83,8 @@ fun IptvPlayerScreen(
     var showOverflowGrid by remember { mutableStateOf(false) }
     var showStreamInfo by remember { mutableStateOf(false) }
     var showSideList by remember { mutableStateOf(false) }
+    var showTrackSelection by remember { mutableStateOf(false) }
+    var showSleepTimer by remember { mutableStateOf(false) }
 
     var gestureType by remember { mutableStateOf("") } 
     var gestureProgress by remember { mutableStateOf(0f) }
@@ -266,6 +268,8 @@ fun IptvPlayerScreen(
                 onToggleAutoSkip = { viewModel.toggleAutoSkip() },
                 onStreamInfoClick = { showStreamInfo = true },
                 onExternalPlayerClick = { openExternalPlayer(context, currentChannel ?: mediaSource) },
+                onShowTracks = { showTrackSelection = true },
+                onShowSleepTimer = { showSleepTimer = true },
                 uaProfile = uaProfile,
                 onCycleUA = { viewModel.cycleUserAgent() }
             )
@@ -276,6 +280,23 @@ fun IptvPlayerScreen(
                 mediaSource = currentChannel ?: mediaSource,
                 playbackState = playbackState,
                 onDismiss = { showStreamInfo = false }
+            )
+        }
+
+        if (showTrackSelection) {
+            TrackSelectionDialog(
+                player = player,
+                onDismiss = { showTrackSelection = false }
+            )
+        }
+
+        if (showSleepTimer) {
+             SleepTimerDialog(
+                onDismiss = { showSleepTimer = false },
+                onSelect = { 
+                    viewModel.setSleepTimer(it)
+                    showSleepTimer = false
+                }
             )
         }
     }
@@ -289,27 +310,61 @@ fun SideChannelList(
     onChannelSelect: (MediaSource) -> Unit,
     onDismiss: () -> Unit
 ) {
+    var searchQuery by remember { mutableStateOf("") }
+    val filteredChannels = remember(searchQuery, channels) {
+        if (searchQuery.isEmpty()) channels
+        else channels.filter { it.displayName.contains(searchQuery, ignoreCase = true) }
+    }
+
     Surface(
         modifier = Modifier
             .fillMaxHeight()
-            .width(300.dp),
-        color = Color.Black.copy(alpha = 0.8f),
-        tonalElevation = 8.dp
+            .width(320.dp),
+        color = Color.Black.copy(alpha = 0.9f),
+        tonalElevation = 12.dp
     ) {
         Column {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text("Channels", color = Color.White, style = MaterialTheme.typography.titleLarge)
-                IconButton(onClick = onDismiss) {
-                    Icon(Icons.Default.Close, contentDescription = null, tint = Color.White)
+            // Header with Search
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Channels", color = Color.White, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Default.Close, contentDescription = null, tint = Color.White)
+                    }
                 }
+                
+                Spacer(Modifier.height(8.dp))
+                
+                TextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("Search...", color = Color.Gray, fontSize = 14.sp) },
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.White.copy(alpha = 0.1f),
+                        unfocusedContainerColor = Color.White.copy(alpha = 0.05f),
+                        focusedIndicatorColor = Color(0xFF00A0E9),
+                        unfocusedIndicatorColor = Color.Transparent,
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                    singleLine = true,
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(20.dp)) },
+                    trailingIcon = if (searchQuery.isNotEmpty()) {
+                        { IconButton(onClick = { searchQuery = "" }) { Icon(Icons.Default.Clear, null, tint = Color.Gray) } }
+                    } else null
+                )
             }
             
+            Divider(color = Color.White.copy(alpha = 0.1f))
+
             LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(channels) { channel ->
+                items(filteredChannels) { channel ->
                     val isSelected = channel.id == currentChannelId
                     val status = statuses.find { it.id == channel.id }?.lastCheckStatus ?: 0
                     val statusColor = when(status) {
@@ -392,6 +447,8 @@ fun IptvOverflowMenu(
     onToggleAutoSkip: () -> Unit = {},
     onStreamInfoClick: () -> Unit = {},
     onExternalPlayerClick: () -> Unit = {},
+    onShowTracks: () -> Unit = {},
+    onShowSleepTimer: () -> Unit = {},
     uaProfile: String = "Default",
     onCycleUA: () -> Unit = {}
 ) {
@@ -416,11 +473,10 @@ fun IptvOverflowMenu(
                         "External Player" to Icons.Default.OpenInNew to onExternalPlayerClick,
                         "UA: $uaProfile" to Icons.Default.Phonelink to onCycleUA,
                         "Stream Info" to Icons.Default.Info to onStreamInfoClick,
-                        "Audio Tracks" to Icons.Default.MusicNote to {},
+                        "Audio Tracks" to Icons.Default.MusicNote to onShowTracks,
                         "Subtitles" to Icons.Default.Subtitles to {},
                         "Refresh EPG" to Icons.Default.Refresh to {},
-                        "Add to Favourites" to Icons.Default.Favorite to {},
-                        "Sleep Timer" to Icons.Default.Timer to {},
+                        "Sleep Timer" to Icons.Default.Timer to onShowSleepTimer,
                         "Full Settings" to Icons.Default.Settings to {}
                     )
 
