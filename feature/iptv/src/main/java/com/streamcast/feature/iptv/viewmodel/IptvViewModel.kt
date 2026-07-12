@@ -71,14 +71,18 @@ class IptvViewModel @Inject constructor(
     private val _selectedCategory = MutableStateFlow<String?>(null)
     val selectedCategory = _selectedCategory.asStateFlow()
 
+    private val _selectedCountry = MutableStateFlow<String?>(null)
+    val selectedCountry = _selectedCountry.asStateFlow()
+
     private val allChannels = repository.getAllChannels()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val filteredChannels: StateFlow<List<Channel>> = combine(
         allChannels,
         _searchQuery,
-        _selectedCategory
-    ) { channels, query, category ->
+        _selectedCategory,
+        _selectedCountry
+    ) { channels, query, category, country ->
         channels.filter { channel ->
             val matchesQuery = query.isEmpty() || channel.name.contains(query, ignoreCase = true)
             // If searching, ignore category filter. Otherwise, check match.
@@ -89,7 +93,10 @@ class IptvViewModel @Inject constructor(
                                  category == "Favorites" || 
                                  category == "Recently Played" || 
                                  channel.category == category
-            matchesQuery && matchesCategory
+            
+            val matchesCountry = country == null || channel.country == country
+
+            matchesQuery && matchesCategory && matchesCountry
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -112,6 +119,11 @@ class IptvViewModel @Inject constructor(
     val seriesFolders = categoryFolders.map { list ->
         list.filter { it.name.startsWith("Series:") }
             .map { it.copy(name = it.name.removePrefix("Series: ")) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val countryFolders: StateFlow<List<IptvCategory>> = allChannels.map { channels ->
+        val groups = channels.groupBy { it.country ?: "Unknown" }
+        groups.map { (name, list) -> IptvCategory(name, list.size) }.sortedBy { it.name }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val favoriteChannels = repository.getFavorites()
@@ -176,6 +188,16 @@ class IptvViewModel @Inject constructor(
                 username = null,
                 password = null,
                 lastSyncedAt = null
+            ),
+            IptvSource(
+                id = "default_india",
+                name = "India (Premium)",
+                type = "M3U_REMOTE",
+                playlistUrl = "https://iptv-org.github.io/iptv/countries/in.m3u",
+                host = null,
+                username = null,
+                password = null,
+                lastSyncedAt = null
             )
         )
         defaultSources.forEach { 
@@ -225,6 +247,12 @@ class IptvViewModel @Inject constructor(
 
     fun onCategorySelected(category: String?) {
         _selectedCategory.value = category
+        _selectedCountry.value = null // Clear country when category is picked
+    }
+
+    fun onCountrySelected(country: String?) {
+        _selectedCountry.value = country
+        _selectedCategory.value = null // Clear category when country is picked
     }
 
     fun markAsPlayed(channelId: String) {

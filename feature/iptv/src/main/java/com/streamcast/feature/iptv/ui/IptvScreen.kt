@@ -41,6 +41,8 @@ fun IptvScreen(
     val liveFolders by viewModel.liveFolders.collectAsState()
     val movieFolders by viewModel.movieFolders.collectAsState()
     val seriesFolders by viewModel.seriesFolders.collectAsState()
+    val countryFolders by viewModel.countryFolders.collectAsState()
+    
     val favoriteChannels by viewModel.favoriteChannels.collectAsState()
     val recentChannels by viewModel.recentChannels.collectAsState()
     val userLiveChannels by viewModel.userLiveChannels.collectAsState()
@@ -48,6 +50,7 @@ fun IptvScreen(
     val filteredChannels by viewModel.filteredChannels.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val selectedCategory by viewModel.selectedCategory.collectAsState()
+    val selectedCountry by viewModel.selectedCountry.collectAsState()
 
     var showAddSourceDialog by remember { mutableStateOf(false) }
     var isSearching by remember { mutableStateOf(false) }
@@ -65,13 +68,20 @@ fun IptvScreen(
                         }
                     )
                 } else {
+                    val currentTitle = when {
+                        selectedCountry != null -> "Country: $selectedCountry"
+                        selectedCategory != null -> selectedCategory!!
+                        else -> "IPTV & Live"
+                    }
+                    
                     TopAppBar(
-                        title = { 
-                            Text(if (selectedCategory != null) selectedCategory!! else "IPTV & Live") 
-                        },
+                        title = { Text(currentTitle) },
                         navigationIcon = {
-                            if (selectedCategory != null) {
-                                IconButton(onClick = { viewModel.onCategorySelected(null) }) {
+                            if (selectedCategory != null || selectedCountry != null) {
+                                IconButton(onClick = { 
+                                    viewModel.onCategorySelected(null)
+                                    viewModel.onCountrySelected(null)
+                                }) {
                                     Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                                 }
                             }
@@ -92,7 +102,7 @@ fun IptvScreen(
                     )
                 }
                 
-                if (selectedCategory == null) {
+                if (selectedCategory == null && selectedCountry == null) {
                     TabRow(selectedTabIndex = selectedTabIndex) {
                         tabs.forEachIndexed { index, title ->
                             Tab(
@@ -109,11 +119,11 @@ fun IptvScreen(
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
             when (selectedTabIndex) {
                 0 -> {
-                    if (searchQuery.isNotEmpty() || selectedCategory != null) {
-                        val displayChannels = when(selectedCategory) {
-                            "Favorites" -> favoriteChannels
-                            "Recently Played" -> recentChannels
-                            "All Channels" -> filteredChannels
+                    if (searchQuery.isNotEmpty() || selectedCategory != null || selectedCountry != null) {
+                        val displayChannels = when {
+                            selectedCategory == "Favorites" -> favoriteChannels
+                            selectedCategory == "Recently Played" -> recentChannels
+                            selectedCategory == "All Channels" -> filteredChannels
                             else -> filteredChannels
                         }
                         ChannelList(channels = displayChannels, onChannelClick = onChannelClick, viewModel = viewModel)
@@ -152,7 +162,7 @@ fun IptvScreen(
                                 item(span = { GridItemSpan(2) }) {
                                     CategoryFolderItem(
                                         name = "All Channels",
-                                        count = liveFolders.sumOf { it.channelCount } + movieFolders.sumOf { it.channelCount } + seriesFolders.sumOf { it.channelCount },
+                                        count = filteredChannels.size,
                                         icon = Icons.Default.Dashboard,
                                         onClick = { viewModel.onCategorySelected("All Channels") }
                                     )
@@ -172,7 +182,23 @@ fun IptvScreen(
                                     }
                                 }
 
-                                // 3. VOD / Movies Section
+                                // 3. Browse by Country
+                                if (countryFolders.isNotEmpty()) {
+                                    item(span = { GridItemSpan(2) }) {
+                                        SectionHeader("Browse by Country")
+                                    }
+                                    items(countryFolders) { country ->
+                                        CategoryFolderItem(
+                                            name = country.name.uppercase(),
+                                            count = country.channelCount,
+                                            icon = Icons.Default.Public,
+                                            iconColor = Color(0xFF4CAF50),
+                                            onClick = { viewModel.onCountrySelected(country.name) }
+                                        )
+                                    }
+                                }
+
+                                // 4. VOD / Movies Section
                                 if (movieFolders.isNotEmpty()) {
                                     item(span = { GridItemSpan(2) }) {
                                         SectionHeader("Movies")
@@ -188,7 +214,7 @@ fun IptvScreen(
                                     }
                                 }
 
-                                // 4. TV Series Section
+                                // 5. TV Series Section
                                 if (seriesFolders.isNotEmpty()) {
                                     item(span = { GridItemSpan(2) }) {
                                         SectionHeader("Series")
@@ -254,7 +280,7 @@ fun SectionHeader(title: String) {
         text = title,
         style = MaterialTheme.typography.titleLarge,
         fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
+        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp, start = 16.dp),
         color = Color(0xFF00A0E9)
     )
 }

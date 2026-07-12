@@ -113,7 +113,7 @@ class IptvPlayerViewModel @Inject constructor(
     }
 
     fun cycleUserAgent() {
-        val profiles = listOf("Default", "Android TV", "iPhone", "Samsung TV")
+        val profiles = listOf("Default", "Android TV", "iPhone", "Samsung TV", "JioTV")
         val nextIndex = (profiles.indexOf(_userAgentProfile.value) + 1) % profiles.size
         _userAgentProfile.value = profiles[nextIndex]
         // Reload current channel with new UA
@@ -129,6 +129,10 @@ class IptvPlayerViewModel @Inject constructor(
             "Android TV" -> customHeaders["User-Agent"] = "AndroidTV/1.0 (Google; Pixel TV)"
             "iPhone" -> customHeaders["User-Agent"] = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
             "Samsung TV" -> customHeaders["User-Agent"] = "Mozilla/5.0 (SMART-TV; LINUX; Tizen 6.0) AppleWebKit/537.36 (KHTML, like Gecko) 71.0.3578.49/6.0 TV Safari/537.36"
+            "JioTV" -> {
+                customHeaders["User-Agent"] = "JioTV/2.3.0 (Linux; Android 10)"
+                customHeaders["Referer"] = "https://www.jiotv.com/"
+            }
         }
         
         val sourceWithHeaders = mediaSource.copy(headers = customHeaders)
