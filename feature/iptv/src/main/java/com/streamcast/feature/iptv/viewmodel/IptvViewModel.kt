@@ -112,7 +112,15 @@ class IptvViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val liveFolders = categoryFolders.map { list ->
-        list.filter { !it.name.startsWith("Movies:") && !it.name.startsWith("Series:") }
+        list.filter { 
+            !it.name.startsWith("Movies:") && 
+            !it.name.startsWith("Series:") && 
+            !it.name.contains("Sports", ignoreCase = true) 
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val sportsFolders = categoryFolders.map { list ->
+        list.filter { it.name.contains("Sports", ignoreCase = true) }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val movieFolders = categoryFolders.map { list ->
@@ -198,6 +206,16 @@ class IptvViewModel @Inject constructor(
                 name = "India (Premium)",
                 type = "M3U_REMOTE",
                 playlistUrl = "https://iptv-org.github.io/iptv/countries/in.m3u",
+                host = null,
+                username = null,
+                password = null,
+                lastSyncedAt = null
+            ),
+            IptvSource(
+                id = "default_sports",
+                name = "Global Sports",
+                type = "M3U_REMOTE",
+                playlistUrl = "https://iptv-org.github.io/iptv/categories/sports.m3u",
                 host = null,
                 username = null,
                 password = null,

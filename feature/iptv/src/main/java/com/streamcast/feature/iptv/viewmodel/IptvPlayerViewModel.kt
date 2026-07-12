@@ -113,7 +113,7 @@ class IptvPlayerViewModel @Inject constructor(
     }
 
     fun cycleUserAgent() {
-        val profiles = listOf("Default", "Android TV", "iPhone", "Samsung TV", "JioTV", "Pakistan Zap")
+        val profiles = listOf("Default", "Android TV", "iPhone", "Samsung TV", "JioTV", "Pakistan Zap", "Sports Pro")
         val nextIndex = (profiles.indexOf(_userAgentProfile.value) + 1) % profiles.size
         _userAgentProfile.value = profiles[nextIndex]
         // Reload current channel with new UA
@@ -139,6 +139,10 @@ class IptvPlayerViewModel @Inject constructor(
                 if (mediaSource.uri.toString().contains("aryzap") || mediaSource.uri.toString().contains("5centscdn")) {
                     customHeaders["Referer"] = "https://live.arydigital.tv/"
                 }
+            }
+            "Sports Pro" -> {
+                customHeaders["User-Agent"] = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+                customHeaders["Referer"] = "https://www.espn.com/"
             }
         }
         

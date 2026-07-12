@@ -39,6 +39,7 @@ fun IptvScreen(
     val tabs = listOf("IPTV", "Live")
     
     val liveFolders by viewModel.liveFolders.collectAsState()
+    val sportsFolders by viewModel.sportsFolders.collectAsState()
     val movieFolders by viewModel.movieFolders.collectAsState()
     val seriesFolders by viewModel.seriesFolders.collectAsState()
     val countryFolders by viewModel.countryFolders.collectAsState()
@@ -189,7 +190,23 @@ fun IptvScreen(
                                     }
                                 }
 
-                                // 3. Browse by Country
+                                // 3. Sports Section
+                                if (sportsFolders.isNotEmpty()) {
+                                    item(span = { GridItemSpan(2) }) {
+                                        SectionHeader("Sports")
+                                    }
+                                    items(sportsFolders) { category ->
+                                        CategoryFolderItem(
+                                            name = category.name,
+                                            count = category.channelCount,
+                                            icon = Icons.Default.SportsSoccer,
+                                            iconColor = Color(0xFF2196F3),
+                                            onClick = { viewModel.onCategorySelected(category.name) }
+                                        )
+                                    }
+                                }
+
+                                // 4. Browse by Country
                                 if (countryFolders.isNotEmpty()) {
                                     item(span = { GridItemSpan(2) }) {
                                         SectionHeader("Browse by Country")
