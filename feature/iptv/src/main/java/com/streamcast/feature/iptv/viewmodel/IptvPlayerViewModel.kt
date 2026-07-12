@@ -113,7 +113,7 @@ class IptvPlayerViewModel @Inject constructor(
     }
 
     fun cycleUserAgent() {
-        val profiles = listOf("Default", "Android TV", "iPhone", "Samsung TV", "JioTV")
+        val profiles = listOf("Default", "Android TV", "iPhone", "Samsung TV", "JioTV", "Pakistan Zap")
         val nextIndex = (profiles.indexOf(_userAgentProfile.value) + 1) % profiles.size
         _userAgentProfile.value = profiles[nextIndex]
         // Reload current channel with new UA
@@ -132,6 +132,13 @@ class IptvPlayerViewModel @Inject constructor(
             "JioTV" -> {
                 customHeaders["User-Agent"] = "JioTV/2.3.0 (Linux; Android 10)"
                 customHeaders["Referer"] = "https://www.jiotv.com/"
+            }
+            "Pakistan Zap" -> {
+                customHeaders["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                // If it's ARY, it might need its specific referer if not already in M3U
+                if (mediaSource.uri.toString().contains("aryzap") || mediaSource.uri.toString().contains("5centscdn")) {
+                    customHeaders["Referer"] = "https://live.arydigital.tv/"
+                }
             }
         }
         

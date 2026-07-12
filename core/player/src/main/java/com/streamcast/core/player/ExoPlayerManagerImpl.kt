@@ -56,10 +56,12 @@ class ExoPlayerManagerImpl @Inject constructor(
             // Custom DataSource.Factory to handle per-stream headers
             val dataSourceFactory = androidx.media3.datasource.DataSource.Factory {
                 val dataSource = baseHttpFactory.createDataSource()
-                // We access the headers from currentMediaSource which is updated on the main thread
-                // during playback transitions.
-                currentMediaSource?.headers?.forEach { (key, value) ->
-                    dataSource.setRequestProperty(key, value)
+                val source = currentMediaSource
+                if (source?.headers?.isNotEmpty() == true) {
+                    android.util.Log.d("ExoPlayerManager", "Applying headers for ${source.displayName}: ${source.headers}")
+                    source.headers.forEach { (key, value) ->
+                        dataSource.setRequestProperty(key, value)
+                    }
                 }
                 dataSource
             }

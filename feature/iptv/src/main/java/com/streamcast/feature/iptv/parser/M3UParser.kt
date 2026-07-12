@@ -35,16 +35,14 @@ object M3UParser {
                 extractAttribute(trimmed, "referrer")?.let { currentHeaders["Referer"] = it }
 
             } else if (trimmed.startsWith("#EXTVLCOPT:")) {
-                val opt = trimmed.substringAfter("#EXTVLCOPT:").trim().lowercase()
+                val opt = trimmed.substringAfter("#EXTVLCOPT:").trim()
+                val lowerOpt = opt.lowercase()
                 when {
-                    opt.contains("user-agent=") -> {
-                        currentHeaders["User-Agent"] = opt.substringAfter("user-agent=").trim()
+                    lowerOpt.contains("user-agent=") -> {
+                        currentHeaders["User-Agent"] = opt.substringAfter("=").trim()
                     }
-                    opt.contains("referer=") -> {
-                        currentHeaders["Referer"] = opt.substringAfter("referer=").trim()
-                    }
-                    opt.contains("referrer=") -> {
-                        currentHeaders["Referer"] = opt.substringAfter("referrer=").trim()
+                    lowerOpt.contains("referer=") || lowerOpt.contains("referrer=") -> {
+                        currentHeaders["Referer"] = opt.substringAfter("=").trim()
                     }
                 }
             } else if (!trimmed.startsWith("#")) {
