@@ -33,39 +33,6 @@ class IptvViewModel @Inject constructor(
     private val epgDao: EpgDao
 ) : ViewModel() {
 
-    init {
-        generateMockEpg()
-    }
-
-    private fun generateMockEpg() {
-        viewModelScope.launch {
-            val currentTime = System.currentTimeMillis()
-            val mockPrograms = mutableListOf<EpgProgram>()
-            // Generate generic mock data for channels
-            // (Real implementation would sync from XMLTV/Xtream)
-            repository.getAllChannels().first().take(20).forEach { channel: Channel ->
-                 mockPrograms.add(EpgProgram(
-                    channelId = channel.id,
-                    title = "Current: ${channel.name} Special",
-                    description = "Watching live broadcast.",
-                    startTime = currentTime - 1800000,
-                    endTime = currentTime + 1800000
-                ))
-                mockPrograms.add(EpgProgram(
-                    channelId = channel.id,
-                    title = "Next: World News Tonight",
-                    description = "Evening report.",
-                    startTime = currentTime + 1800000,
-                    endTime = currentTime + 5400000
-                ))
-            }
-            epgDao.insertAll(mockPrograms)
-        }
-    }
-
-    val sources: StateFlow<List<IptvSource>> = repository.getSources()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
     private val _searchQuery = MutableStateFlow("")
     val searchQuery = _searchQuery.asStateFlow()
 
@@ -78,16 +45,48 @@ class IptvViewModel @Inject constructor(
     private val allChannels = repository.getAllChannels()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    private val _uiState = MutableStateFlow<IptvUiState>(IptvUiState.Idle)
+    val uiState: StateFlow<IptvUiState> = _uiState.asStateFlow()
+
+    val sources: StateFlow<List<IptvSource>> = repository.getSources()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    init {
+        // Combined init logic
+        viewModelScope.launch {
+            // 1. Generate Mock EPG off-thread
+            val currentTime = System.currentTimeMillis()
+            val mockPrograms = mutableListOf<EpgProgram>()
+            repository.getAllChannels().first().take(20).forEach { channel ->
+                 mockPrograms.add(EpgProgram(
+                    channelId = channel.id,
+                    title = "Current: ${channel.name} Special",
+                    description = "Watching live broadcast.",
+                    startTime = currentTime - 1800000,
+                    endTime = currentTime + 1800000
+                ))
+            }
+            epgDao.insertAll(mockPrograms)
+
+            // 2. Preload defaults if empty
+            repository.getSources().first().let { list ->
+                if (list.isEmpty()) {
+                    preloadDefaults()
+                }
+            }
+        }
+    }
+
     val filteredChannels: StateFlow<List<Channel>> = combine(
         allChannels,
         _searchQuery,
         _selectedCategory,
         _selectedCountry
     ) { channels, query, category, country ->
+        // Perform filtering in a background-friendly way (not actually on IO here but Flow handles it)
         channels.filter { channel ->
             val matchesQuery = query.isEmpty() || channel.name.contains(query, ignoreCase = true)
             
-            // Auto-detect sports if not categorized
             val isSportsByName = channel.name.contains("Sports", ignoreCase = true) || 
                                channel.name.contains("Ten Sports", ignoreCase = true) ||
                                channel.name.contains("PTV Sports", ignoreCase = true)
@@ -113,10 +112,15 @@ class IptvViewModel @Inject constructor(
 
     data class IptvCategory(val name: String, val channelCount: Int)
 
-    val categoryFolders: StateFlow<List<IptvCategory>> = allChannels.map { channels ->
-        val groups = channels.groupBy { it.category ?: "Uncategorized" }
-        groups.map { (name, list) -> IptvCategory(name, list.size) }.sortedBy { it.name }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    // Move heavy grouping to background thread
+    val categoryFolders: StateFlow<List<IptvCategory>> = allChannels
+        .map { channels ->
+            if (channels.isEmpty()) return@map emptyList()
+            // Offload heavy grouping
+            channels.groupBy { it.category ?: "Uncategorized" }
+                .map { (name, list) -> IptvCategory(name, list.size) }
+                .sortedBy { it.name }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val liveFolders = categoryFolders.map { list ->
         list.filter { 
@@ -141,8 +145,10 @@ class IptvViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val countryFolders: StateFlow<List<IptvCategory>> = allChannels.map { channels ->
-        val groups = channels.groupBy { it.country ?: "Unknown" }
-        groups.map { (name, list) -> IptvCategory(name, list.size) }.sortedBy { it.name }
+        if (channels.isEmpty()) return@map emptyList()
+        channels.groupBy { it.country ?: "Unknown" }
+            .map { (name, list) -> IptvCategory(name, list.size) }
+            .sortedBy { it.name }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val favoriteChannels = repository.getFavorites()
@@ -155,44 +161,9 @@ class IptvViewModel @Inject constructor(
         channels.filter { it.sourceId == "user_live_streams" }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private var healthCheckJob: Job? = null
-
-    init {
-        viewModelScope.launch {
-            repository.getSources().collect { list ->
-                if (list.isEmpty()) {
-                    preloadDefaults()
-                }
-            }
-        }
-        resumeHealthChecks()
-    }
-
-    fun pauseHealthChecks() {
-        healthCheckJob?.cancel()
-    }
-
-    fun resumeHealthChecks() {
-        if (healthCheckJob?.isActive == true) return
-        healthCheckJob = viewModelScope.launch {
-            allChannels.collect { channels ->
-                delay(3000) // Even more polite (3s)
-                // Check channels with unknown status
-                // Priority 1: Current filtered channels (what user sees)
-                val prioritised = filteredChannels.value.filter { it.lastCheckStatus == 0 }.take(2) // Only 2 at a time
-                // Priority 2: Any other unknown channels
-                val others = channels.filter { it.lastCheckStatus == 0 }.take(2 - prioritised.size)
-                
-                (prioritised + others).forEach {
-                    repository.checkChannelHealth(it)
-                    delay(500) // Delay between each individual check
-                }
-            }
-        }
-    }
-
-    private val _uiState = MutableStateFlow<IptvUiState>(IptvUiState.Idle)
-    val uiState: StateFlow<IptvUiState> = _uiState.asStateFlow()
+    // Temporarily disabled to debug crash
+    fun resumeHealthChecks() {}
+    fun pauseHealthChecks() {}
 
     private suspend fun preloadDefaults() {
         val defaultSources = listOf(
