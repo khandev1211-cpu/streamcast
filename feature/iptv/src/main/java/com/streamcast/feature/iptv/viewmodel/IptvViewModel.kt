@@ -11,6 +11,7 @@ import com.streamcast.core.player.SourceType
 import com.streamcast.feature.iptv.data.IptvPlaylistManager
 import com.streamcast.feature.iptv.data.IptvRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -154,10 +155,28 @@ class IptvViewModel @Inject constructor(
         channels.filter { it.sourceId == "user_live_streams" }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private fun startBackgroundHealthChecks() {
+    private var healthCheckJob: Job? = null
+
+    init {
         viewModelScope.launch {
+            repository.getSources().collect { list ->
+                if (list.isEmpty()) {
+                    preloadDefaults()
+                }
+            }
+        }
+        resumeHealthChecks()
+    }
+
+    fun pauseHealthChecks() {
+        healthCheckJob?.cancel()
+    }
+
+    fun resumeHealthChecks() {
+        if (healthCheckJob?.isActive == true) return
+        healthCheckJob = viewModelScope.launch {
             allChannels.collect { channels ->
-                delay(1000) // Be polite to the UI and network
+                delay(2000) // Be polite to the UI and network
                 // Check channels with unknown status
                 // Priority 1: Current filtered channels (what user sees)
                 val prioritised = filteredChannels.value.filter { it.lastCheckStatus == 0 }.take(5)
@@ -173,17 +192,6 @@ class IptvViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow<IptvUiState>(IptvUiState.Idle)
     val uiState: StateFlow<IptvUiState> = _uiState.asStateFlow()
-
-    init {
-        viewModelScope.launch {
-            repository.getSources().collect { list ->
-                if (list.isEmpty()) {
-                    preloadDefaults()
-                }
-            }
-        }
-        startBackgroundHealthChecks()
-    }
 
     private suspend fun preloadDefaults() {
         val defaultSources = listOf(

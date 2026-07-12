@@ -54,10 +54,11 @@ class ExoPlayerManagerImpl @Inject constructor(
     private fun ensurePlayer(): ExoPlayer {
         return exoPlayer ?: run {
             val okHttpClient = OkHttpClient.Builder()
-                .connectTimeout(20, TimeUnit.SECONDS)
-                .readTimeout(20, TimeUnit.SECONDS)
+                .connectTimeout(30, TimeUnit.SECONDS)
+                .readTimeout(30, TimeUnit.SECONDS)
                 .followRedirects(true)
                 .followSslRedirects(true)
+                .protocols(listOf(okhttp3.Protocol.HTTP_1_1)) // Force HTTP 1.1 for legacy IPTV servers
                 .build()
 
             val dataSourceFactory = androidx.media3.datasource.DataSource.Factory {
@@ -76,14 +77,24 @@ class ExoPlayerManagerImpl @Inject constructor(
                             .setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
                             .createDataSource()
                         
-                        // Apply per-stream custom headers
+                        // Force connection close for low-quality servers to avoid hanging
+                        dataSource.setRequestProperty("Connection", "close")
+
+                        // Apply per-stream custom headers from ViewModel profiles
                         source?.headers?.forEach { (key, value) ->
                             dataSource.setRequestProperty(key, value)
                         }
 
                         // Auto-apply VLC headers for common PK headends (ports 8000, 9981)
-                        if (uri?.port == 8000 || uri?.port == 9981) {
-                            dataSource.setRequestProperty("User-Agent", "VLC/3.0.11 LibVLC/3.0.11")
+                        if (uri?.port == 8000 || uri?.port == 9981 || uri?.port == 80 || uri?.port == 443) {
+                            // If it's a known Sports/PK headend IP, double down on VLC
+                            val host = uri.host ?: ""
+                            if (host.startsWith("103.") || host.startsWith("121.") || host.startsWith("115.")) {
+                                dataSource.setRequestProperty("User-Agent", "VLC/3.0.11 LibVLC/3.0.11")
+                                if (source?.headers?.containsKey("Referer") == false) {
+                                    dataSource.setRequestProperty("Referer", "http://ptvsports.com.pk/")
+                                }
+                            }
                         }
 
                         dataSource
