@@ -257,7 +257,8 @@ class IptvViewModel @Inject constructor(
             repository.refreshSource(it.id)
         }
         
-        // Add specific working PTV Sports link to Live tab for testing
+        // Add specific working PTV/ARY links to Live tab for testing
+        addLiveStream("ARY Digital (HD)", "https://6zklx4wryw9b-hls-live.5centscdn.com/arydigital/498f1704b692c3ad4dbfdf5ba5d04536.sdp/playlist.m3u8")
         addLiveStream("PTV Sports (Premium)", "https://tvsen5.aynaott.com/Ptvsports/index.m3u8")
         addLiveStream("Ten Sports (Premium)", "http://121.91.61.106:8000/play/a04h/index.m3u8")
     }
