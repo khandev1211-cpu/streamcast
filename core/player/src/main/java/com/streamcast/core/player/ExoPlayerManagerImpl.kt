@@ -58,13 +58,33 @@ class ExoPlayerManagerImpl @Inject constructor(
                 .readTimeout(30, TimeUnit.SECONDS)
                 .followRedirects(true)
                 .followSslRedirects(true)
+                .retryOnConnectionFailure(true)
                 .protocols(listOf(okhttp3.Protocol.HTTP_1_1)) // Force HTTP 1.1 for legacy IPTV servers
                 .addInterceptor { chain ->
-                    val originalBuilder = chain.request().newBuilder()
-                    currentMediaSource?.headers?.forEach { (key, value) ->
-                        originalBuilder.header(key, value)
+                    val originalRequest = chain.request()
+                    val source = currentMediaSource
+                    val requestBuilder = originalRequest.newBuilder()
+                    
+                    // 1. Inject headers from the database/M3U
+                    source?.headers?.forEach { (key, value) ->
+                        requestBuilder.header(key, value)
                     }
-                    chain.proceed(originalBuilder.build())
+
+                    // 2. Auto-Fix for Pakistani Networks
+                    val url = originalRequest.url.toString()
+                    if (url.contains("aryzap") || url.contains("5centscdn")) {
+                        requestBuilder.header("Referer", "https://live.arydigital.tv/")
+                        requestBuilder.header("Origin", "https://live.arydigital.tv")
+                    } else if (url.contains("mjunoon")) {
+                        requestBuilder.header("Referer", "https://www.mjunoon.tv/")
+                    }
+
+                    // 3. Mimic a real Pro Player (VLC) which is trusted by PK headends
+                    if (originalRequest.header("User-Agent") == null) {
+                        requestBuilder.header("User-Agent", "VLC/3.0.11 LibVLC/3.0.11")
+                    }
+
+                    chain.proceed(requestBuilder.build())
                 }
                 .build()
 
