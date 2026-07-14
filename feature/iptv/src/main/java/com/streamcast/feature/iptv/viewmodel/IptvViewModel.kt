@@ -171,28 +171,40 @@ class IptvViewModel @Inject constructor(
 
     private var healthCheckJob: Job? = null
 
-    // Restore health checks with a SAFE, non-looping timer logic
+    fun pauseHealthChecks() {
+        healthCheckJob?.cancel()
+    }
+
+    // Turbo-charged Health System: Prioritizes visible channels while scrolling
     fun resumeHealthChecks() {
         if (healthCheckJob?.isActive == true) return
         healthCheckJob = viewModelScope.launch {
-            // Wait for app to settle after launch
-            delay(10000) 
-            while(true) {
-                // Fetch the list ONCE at the start of each check cycle
-                // This avoids the infinite loop triggered by DB updates
-                val currentChannels = allChannels.value
-                if (currentChannels.isNotEmpty()) {
-                    val prioritised = filteredChannels.value.filter { it.lastCheckStatus == 0 }.take(2)
-                    val others = currentChannels.filter { it.lastCheckStatus == 0 }.take(2 - prioritised.size)
-                    
-                    (prioritised + others).forEach {
+            // Faster startup delay
+            delay(2000) 
+            
+            combine(allChannels, filteredChannels) { all, filtered ->
+                all to filtered
+            }.collect { (all, filtered) ->
+                // Priority 1: Check channels the user is currently looking at (the "Filtered" list)
+                // We check 5 at a time now for a "Faster" feel
+                val visibleToCheck = filtered.filter { it.lastCheckStatus == 0 }.take(8)
+                
+                if (visibleToCheck.isNotEmpty()) {
+                    visibleToCheck.forEach {
                         repository.checkChannelHealth(it)
-                        // Huge delay between pings to ensure Android 10 devices don't choke
-                        delay(10000) 
+                        delay(100) // Micro-delay to prevent UI jank
+                    }
+                } else {
+                    // Priority 2: If visible are done, check background channels in bulk
+                    val backgroundToCheck = all.filter { it.lastCheckStatus == 0 }.take(5)
+                    backgroundToCheck.forEach {
+                        repository.checkChannelHealth(it)
+                        delay(200)
                     }
                 }
-                // Wait 30 seconds before starting the next cycle
-                delay(30000)
+                
+                // Wait a bit before next scan cycle to keep battery usage low
+                delay(3000)
             }
         }
     }

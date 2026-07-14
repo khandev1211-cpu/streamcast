@@ -1,21 +1,27 @@
 package com.streamcast.feature.iptv.ui
 
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -64,6 +70,7 @@ fun IptvScreen(
     }
 
     Scaffold(
+        containerColor = Color.Black,
         topBar = {
             Column {
                 if (isSearching) {
@@ -83,14 +90,20 @@ fun IptvScreen(
                     }
                     
                     TopAppBar(
-                        title = { Text(currentTitle) },
+                        title = { Text(currentTitle, fontWeight = FontWeight.Bold) },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = Color.Black,
+                            titleContentColor = Color.White,
+                            actionIconContentColor = Color.White,
+                            navigationIconContentColor = Color.White
+                        ),
                         navigationIcon = {
                             if (selectedCategory != null || selectedCountry != null) {
                                 IconButton(onClick = { 
                                     viewModel.onCategorySelected(null)
                                     viewModel.onCountrySelected(null)
                                 }) {
-                                    Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                                 }
                             }
                         },
@@ -109,12 +122,23 @@ fun IptvScreen(
                 }
                 
                 if (selectedCategory == null && selectedCountry == null) {
-                    TabRow(selectedTabIndex = selectedTabIndex) {
+                    TabRow(
+                        selectedTabIndex = selectedTabIndex,
+                        containerColor = Color.Black,
+                        contentColor = Color(0xFF00A0E9),
+                        divider = { HorizontalDivider(color = Color.White.copy(alpha = 0.1f)) }
+                    ) {
                         tabs.forEachIndexed { index, title ->
                             Tab(
                                 selected = selectedTabIndex == index,
                                 onClick = { selectedTabIndex = index },
-                                text = { Text(title) }
+                                text = { 
+                                    Text(
+                                        title, 
+                                        fontWeight = if (selectedTabIndex == index) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (selectedTabIndex == index) Color(0xFF00A0E9) else Color.Gray
+                                    ) 
+                                }
                             )
                         }
                     }
@@ -122,7 +146,7 @@ fun IptvScreen(
             }
         }
     ) { padding ->
-        Box(modifier = Modifier.padding(padding).fillMaxSize()) {
+        Box(modifier = Modifier.padding(padding).fillMaxSize().background(Color.Black)) {
             when (selectedTabIndex) {
                 0 -> {
                     if (searchQuery.isNotEmpty() || selectedCategory != null || selectedCountry != null) {
@@ -136,9 +160,7 @@ fun IptvScreen(
                     } else {
                         // Folder View Mode
                         if (liveFolders.isEmpty() && movieFolders.isEmpty() && seriesFolders.isEmpty()) {
-                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                CircularProgressIndicator()
-                            }
+                            IptvShimmerGrid()
                         } else {
                             LazyVerticalGrid(
                                 columns = GridCells.Fixed(2),
@@ -148,13 +170,13 @@ fun IptvScreen(
                             ) {
                                 // Special Folders
                                 item(key = "fav_folder") {
-                                    CategoryFolderItem("Favorites", favoriteChannels.size, Icons.Default.Favorite, Color.Red) { viewModel.onCategorySelected("Favorites") }
+                                    CategoryFolderItem("Favorites", favoriteChannels.size, Icons.Default.Favorite, Color(0xFFFF4B4B)) { viewModel.onCategorySelected("Favorites") }
                                 }
                                 item(key = "recent_folder") {
-                                    CategoryFolderItem("Recent", recentChannels.size, Icons.Default.History, Color.Green) { viewModel.onCategorySelected("Recently Played") }
+                                    CategoryFolderItem("Recent", recentChannels.size, Icons.Default.History, Color(0xFF4CAF50)) { viewModel.onCategorySelected("Recently Played") }
                                 }
                                 item(span = { GridItemSpan(2) }, key = "all_folder") {
-                                    CategoryFolderItem("All Channels", filteredChannels.size, Icons.Default.Dashboard) { viewModel.onCategorySelected("All Channels") }
+                                    CategoryFolderItem("All Channels", filteredChannels.size, Icons.Default.Dashboard, Color(0xFF00A0E9), isFullWidth = true) { viewModel.onCategorySelected("All Channels") }
                                 }
 
                                 if (liveFolders.isNotEmpty()) {
@@ -228,27 +250,135 @@ fun IptvScreen(
 
 @Composable
 fun SectionHeader(title: String) {
-    Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color(0xFF00A0E9), modifier = Modifier.padding(top = 8.dp))
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+    ) {
+        Box(modifier = Modifier.size(width = 4.dp, height = 18.dp).background(Color(0xFF00A0E9), RoundedCornerShape(2.dp)))
+        Spacer(Modifier.width(8.dp))
+        Text(
+            title, 
+            style = MaterialTheme.typography.titleMedium, 
+            fontWeight = FontWeight.ExtraBold, 
+            color = Color.White
+        )
+    }
 }
 
 @Composable
-fun CategoryFolderItem(name: String, count: Int, icon: ImageVector = Icons.Default.Folder, iconColor: Color = Color(0xFF00A0E9), onClick: () -> Unit) {
+fun CategoryFolderItem(
+    name: String, 
+    count: Int, 
+    icon: ImageVector = Icons.Default.Folder, 
+    iconColor: Color = Color(0xFF00A0E9),
+    isFullWidth: Boolean = false,
+    onClick: () -> Unit
+) {
+    val gradient = Brush.verticalGradient(
+        colors = listOf(
+            Color.White.copy(alpha = 0.08f),
+            Color.White.copy(alpha = 0.02f)
+        )
+    )
+
     Card(
-        modifier = Modifier.fillMaxWidth().clickable { onClick() },
-        colors = CardDefaults.cardColors(containerColor = Color.Gray.copy(alpha = 0.1f))
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(if (isFullWidth) 80.dp else 110.dp)
+            .shadow(elevation = 8.dp, shape = RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(16.dp))
+            .clickable { onClick() }
+            .border(0.5.dp, Color.White.copy(alpha = 0.05f), RoundedCornerShape(16.dp)),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
-        Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(icon, null, modifier = Modifier.size(40.dp), tint = iconColor)
-            Spacer(Modifier.height(4.dp))
-            Text(name, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 14.sp)
-            Text("$count items", fontSize = 11.sp, color = Color.Gray)
+        Box(modifier = Modifier.fillMaxSize().background(gradient)) {
+            if (isFullWidth) {
+                Row(
+                    modifier = Modifier.fillMaxSize().padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier.size(48.dp).background(iconColor.copy(alpha = 0.1f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(icon, null, modifier = Modifier.size(24.dp), tint = iconColor)
+                    }
+                    Spacer(Modifier.width(16.dp))
+                    Column {
+                        Text(name, fontWeight = FontWeight.Bold, color = Color.White, fontSize = 16.sp)
+                        Text("$count channels", fontSize = 12.sp, color = Color.Gray)
+                    }
+                    Spacer(Modifier.weight(1f))
+                    Icon(Icons.Default.ChevronRight, null, tint = Color.Gray)
+                }
+            } else {
+                Column(
+                    modifier = Modifier.fillMaxSize().padding(12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Box(
+                        modifier = Modifier.size(44.dp).background(iconColor.copy(alpha = 0.1f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(icon, null, modifier = Modifier.size(24.dp), tint = iconColor)
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text(name, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 14.sp, color = Color.White)
+                    Text("$count items", fontSize = 11.sp, color = Color.Gray)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun IptvShimmerGrid() {
+    val transition = rememberInfiniteTransition(label = "shimmer")
+    val translateAnim by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1000f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "shimmer"
+    )
+
+    val shimmerColors = listOf(
+        Color.White.copy(alpha = 0.05f),
+        Color.White.copy(alpha = 0.15f),
+        Color.White.copy(alpha = 0.05f),
+    )
+
+    val brush = Brush.linearGradient(
+        colors = shimmerColors,
+        start = Offset.Zero,
+        end = Offset(x = translateAnim, y = translateAnim)
+    )
+
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
+        contentPadding = PaddingValues(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        userScrollEnabled = false
+    ) {
+        items(6) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(110.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(brush)
+            )
         }
     }
 }
 
 @Composable
 fun ChannelList(channels: List<Channel>, onChannelClick: (MediaSource, List<MediaSource>) -> Unit, viewModel: IptvViewModel) {
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
+    LazyColumn(modifier = Modifier.fillMaxSize().background(Color.Black)) {
         items(channels, key = { it.id }) { channel ->
             ChannelItem(channel) { 
                 viewModel.preparePlaylist(channels)
@@ -271,53 +401,108 @@ fun ChannelList(channels: List<Channel>, onChannelClick: (MediaSource, List<Medi
 fun SearchTopBar(query: String, onQueryChange: (String) -> Unit, onClose: () -> Unit) {
     TopAppBar(
         title = {
-            TextField(value = query, onValueChange = onQueryChange, placeholder = { Text("Search...") }, modifier = Modifier.fillMaxWidth(),
+            TextField(value = query, onValueChange = onQueryChange, placeholder = { Text("Search channels...") }, modifier = Modifier.fillMaxWidth(),
                 colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent, focusedIndicatorColor = Color.Transparent), singleLine = true)
+                    unfocusedIndicatorColor = Color.Transparent, focusedIndicatorColor = Color.Transparent,
+                    focusedTextColor = Color.White, unfocusedTextColor = Color.White), singleLine = true)
         },
-        navigationIcon = { IconButton(onClick = onClose) { Icon(Icons.Default.ArrowBack, null) } }
+        navigationIcon = { IconButton(onClick = onClose) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = Color.White) } },
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black)
     )
 }
 
 @Composable
 fun ChannelItem(channel: Channel, onClick: () -> Unit) {
+    val statusColor = when (channel.lastCheckStatus) {
+        1 -> Color.Green
+        2 -> Color.Red
+        else -> Color.Gray
+    }
+
     ListItem(
         headlineContent = { 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(channel.name, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Box(modifier = Modifier.size(8.dp).background(if (channel.lastCheckStatus == 1) Color.Green else if (channel.lastCheckStatus == 2) Color.Red else Color.Gray, CircleShape))
+                Text(
+                    text = channel.name, 
+                    fontWeight = FontWeight.SemiBold, 
+                    modifier = Modifier.weight(1f), 
+                    maxLines = 1, 
+                    overflow = TextOverflow.Ellipsis, 
+                    color = Color.White
+                )
+                // Pulsing Green dot for active channels
+                if (channel.lastCheckStatus == 1) {
+                    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+                    val alpha by infiniteTransition.animateFloat(
+                        initialValue = 0.4f,
+                        targetValue = 1f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(1000),
+                            repeatMode = RepeatMode.Reverse
+                        ),
+                        label = "alpha"
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .background(statusColor.copy(alpha = alpha), CircleShape)
+                            .border(1.dp, statusColor, CircleShape)
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .background(statusColor, CircleShape)
+                    )
+                }
             }
         },
         supportingContent = { 
-            Text(listOfNotNull(channel.category, channel.country?.uppercase()).joinToString(" • "), fontSize = 12.sp)
+            Text(listOfNotNull(channel.category, channel.country?.uppercase()).joinToString(" • "), fontSize = 12.sp, color = Color.Gray)
         },
         leadingContent = {
-            Surface(modifier = Modifier.size(40.dp), shape = MaterialTheme.shapes.small, color = Color.Gray.copy(alpha = 0.2f)) {
+            Surface(modifier = Modifier.size(44.dp), shape = RoundedCornerShape(8.dp), color = Color.White.copy(alpha = 0.05f), border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.1f))) {
                 if (channel.logoUrl != null) AsyncImage(channel.logoUrl, null, modifier = Modifier.fillMaxSize())
-                else Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Tv, null, modifier = Modifier.size(24.dp)) }
+                else Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Tv, null, modifier = Modifier.size(24.dp), tint = Color.Gray) }
             }
         },
-        modifier = Modifier.clickable { onClick() }
+        modifier = Modifier.clickable { onClick() },
+        colors = ListItemDefaults.colors(containerColor = Color.Black)
     )
 }
 
 @Composable
 fun AddSourceDialog(onDismiss: () -> Unit, onAdd: (String, String, String, String) -> Unit) {
     var n by remember { mutableStateOf("") }; var h by remember { mutableStateOf("") }; var u by remember { mutableStateOf("") }; var p by remember { mutableStateOf("") }
-    AlertDialog(onDismissRequest = onDismiss, title = { Text("Add Xtream") }, text = {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextField(n, { n = it }, label = { Text("Name") }); TextField(h, { h = it }, label = { Text("Host") })
-            TextField(u, { u = it }, label = { Text("User") }); TextField(p, { p = it }, label = { Text("Pass") })
-        }
-    }, confirmButton = { Button({ onAdd(n, h, u, p) }) { Text("Add") } })
+    AlertDialog(
+        onDismissRequest = onDismiss, 
+        title = { Text("Add Xtream Source") }, 
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextField(n, { n = it }, label = { Text("Name") }, modifier = Modifier.fillMaxWidth()); 
+                TextField(h, { h = it }, label = { Text("Host (e.g. http://host:port)") }, modifier = Modifier.fillMaxWidth())
+                TextField(u, { u = it }, label = { Text("Username") }, modifier = Modifier.fillMaxWidth()); 
+                TextField(p, { p = it }, label = { Text("Password") }, modifier = Modifier.fillMaxWidth())
+            }
+        }, 
+        confirmButton = { Button({ onAdd(n, h, u, p) }) { Text("Add") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
 }
 
 @Composable
 fun AddLiveUrlDialog(onDismiss: () -> Unit, onAdd: (String, String) -> Unit) {
     var n by remember { mutableStateOf("") }; var u by remember { mutableStateOf("") }
-    AlertDialog(onDismissRequest = onDismiss, title = { Text("Add Live") }, text = {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextField(n, { n = it }, label = { Text("Name") }); TextField(u, { u = it }, label = { Text("URL") })
-        }
-    }, confirmButton = { Button({ onAdd(n, u) }) { Text("Add") } })
+    AlertDialog(
+        onDismissRequest = onDismiss, 
+        title = { Text("Add Live Stream") }, 
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextField(n, { n = it }, label = { Text("Stream Name") }, modifier = Modifier.fillMaxWidth()); 
+                TextField(u, { u = it }, label = { Text("Stream URL") }, modifier = Modifier.fillMaxWidth())
+            }
+        }, 
+        confirmButton = { Button({ onAdd(n, u) }) { Text("Add") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
 }

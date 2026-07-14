@@ -380,10 +380,10 @@ fun SideChannelList(
                 )
             }
             
-            Divider(color = Color.White.copy(alpha = 0.1f))
+            HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
 
             LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(filteredChannels) { channel ->
+                items(filteredChannels, key = { it.id }) { channel ->
                     val isSelected = channel.id == currentChannelId
                     val status = statuses.find { it.id == channel.id }?.lastCheckStatus ?: 0
                     val statusColor = when(status) {
@@ -522,7 +522,7 @@ fun IptvOverflowMenu(
                         }
                     }
 
-                    Divider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 12.dp))
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 12.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),

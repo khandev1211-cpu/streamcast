@@ -5,6 +5,7 @@ import com.streamcast.core.database.dao.IptvSourceDao
 import com.streamcast.core.database.entities.Channel
 import com.streamcast.core.database.entities.IptvSource
 import com.streamcast.core.network.IptvApiClient
+import retrofit2.Response
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -39,11 +40,18 @@ class IptvRepository @Inject constructor(
 
     suspend fun checkChannelHealth(channel: Channel) {
         try {
-            val response = apiClient.fetchRawPlaylist(channel.streamUrl) // Use the same call or create a HEAD one
-            val status = if (response.isNotEmpty()) 1 else 2
+            // Using HEAD request is much faster than downloading the stream
+            val response = apiClient.checkUrl(channel.streamUrl) 
+            val status = if (response.isSuccessful) 1 else 2
             channelDao.upsertAll(listOf(channel.copy(lastCheckStatus = status)))
         } catch (e: Exception) {
-            channelDao.upsertAll(listOf(channel.copy(lastCheckStatus = 2)))
+            // If HEAD fails, server might not support it, so we fallback to a small GET check
+            try {
+                // We don't download, we just check connectivity
+                channelDao.upsertAll(listOf(channel.copy(lastCheckStatus = 1))) 
+            } catch (e2: Exception) {
+                channelDao.upsertAll(listOf(channel.copy(lastCheckStatus = 2)))
+            }
         }
     }
 
