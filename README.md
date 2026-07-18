@@ -1,4 +1,4 @@
-# 🎥 StreamCast: The Ultimate Unified Media Experience
+# 🎥 StreamCast: The Ultimate Unified Media Experience to desgin 
 
 [![Android Build](https://github.com/khandev1211-cpu/streamcast/actions/workflows/android.yml/badge.svg)](https://github.com/khandev1211-cpu/streamcast/actions/workflows/android.yml)
 [![Version](https://img.shields.io/badge/version-v1.0.0--beta-blue.svg)](https://github.com/khandev1211-cpu/streamcast)
